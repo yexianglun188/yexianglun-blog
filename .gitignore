@@ -13,6 +13,7 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.development
 
 # Python
 __pycache__/
@@ -53,6 +54,9 @@ next-env.d.ts
 
 # 上传文件
 uploads/
+
+# 压缩包
+*.zip
 
 # 其他
 .eslintcache

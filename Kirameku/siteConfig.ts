@@ -32,8 +32,8 @@ export const siteConfig = {
   cloudMusicPlaylistId: "17943739323",  // 歌单 ID（优先）
   cloudMusicIds: [],                     // 歌曲 ID 列表（歌单为空时使用）
 
-  // 后端 API 地址
-  apiBaseUrl: "http://localhost:8000",
+  // 后端 API 地址（留空，开发通过 next.config.ts rewrites 代理，生产通过 Nginx 反代）
+  apiBaseUrl: "",
 
   // 社交链接
   social: {

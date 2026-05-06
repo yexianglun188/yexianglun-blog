@@ -10,7 +10,7 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 72
 
-CORS_ORIGINS = ["http://localhost:3000", "http://localhost:5173"]
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
 
 # 阿里云 OSS 配置
 OSS_ACCESS_KEY_ID = os.environ["OSS_ACCESS_KEY_ID"]
