@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/* ========== 毛玻璃基础样式 ========== */
+
+/* backdrop-filter 由 Tailwind 类自行处理，不全局覆盖 */
+
+/* 毛玻璃卡片 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+}
+
+/* 暗色模式毛玻璃 */
+.dark .glass-card {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* 毛玻璃按钮 */
+.glass-button {
+  background: rgba(255, 255, 255, 0.3);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .glass-button {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .glass-button:hover {
+  background: rgba(71, 85, 105, 0.6);
+}
+
+/* 毛玻璃输入框 */
+.glass-input {
+  background: rgba(255, 255, 255, 0.3);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.glass-input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.dark .glass-input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .glass-input:focus {
+  border-color: rgba(129, 140, 248, 0.5);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1);
+}
+
+/* ========== 自定义滚动条 ========== */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.8);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+}
+
+/* ========== 背景渐变动画 ========== */
+
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-background {
+  background-size: 400% 400%;
+  animation: gradient-flow 15s ease infinite;
+}
+
+/* ========== 文字截断 ========== */
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ========== 暗色模式背景增强 ========== */
+
+.dark body {
+  background: linear-gradient(135deg, #0f0b2e 0%, #1a1145 25%, #0d1b3e 50%, #1e1145 75%, #0f0b2e 100%);
+  background-size: 400% 400%;
+  animation: gradient-flow 20s ease infinite;
+}
+
+/* Live2D 看板娘层级 */
+#waifu {
+  z-index: 40 !important;
+}
+
+#waifu-toggle {
+  z-index: 40 !important;
+}
