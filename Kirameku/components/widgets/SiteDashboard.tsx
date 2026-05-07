@@ -8,7 +8,7 @@ export default function SiteDashboard() {
   const [uptimeStr, setUptimeStr] = useState("");
 
   const START_DATE = new Date(
-    siteConfig.buildDate || "2026-05-03T00:00:00"
+    siteConfig.buildDate || "2026-05-07T12:00:00"
   ).getTime();
 
   useEffect(() => {
@@ -26,7 +26,9 @@ export default function SiteDashboard() {
       const diff = now.getTime() - START_DATE;
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      setUptimeStr(`${days}天 ${hours}小时`);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+      setUptimeStr(`${days}天 ${hours}时${minutes}分${seconds}秒`);
     };
 
     updateTime();
@@ -43,7 +45,7 @@ export default function SiteDashboard() {
       </div>
 
       <div className="flex-1 px-6 py-4 md:py-0 flex flex-wrap items-center justify-between gap-4 text-xs md:text-sm font-bold text-slate-600 dark:text-slate-300">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-start">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span>
             系统已稳定运行：
@@ -53,16 +55,28 @@ export default function SiteDashboard() {
           </span>
         </div>
 
-        {siteConfig.icpConfig?.name && (
-          <a
-            href={siteConfig.icpConfig.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-indigo-500 transition-colors border-b border-dashed border-slate-400 dark:border-slate-500 pb-0.5"
-          >
-            {siteConfig.icpConfig.name}
-          </a>
-        )}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-center md:justify-end">
+          {siteConfig.icpConfig?.name && (
+            <a
+              href={siteConfig.icpConfig.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-indigo-500 transition-colors border-b border-dashed border-slate-400 dark:border-slate-500 pb-0.5"
+            >
+              {siteConfig.icpConfig.name}
+            </a>
+          )}
+          {siteConfig.moeIcpConfig?.name && (
+            <a
+              href={siteConfig.moeIcpConfig.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-indigo-500 transition-colors border-b border-dashed border-slate-400 dark:border-slate-500 pb-0.5"
+            >
+              {siteConfig.moeIcpConfig.name}
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );

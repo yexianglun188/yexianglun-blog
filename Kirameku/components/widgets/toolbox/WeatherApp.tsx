@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const API_BASE = "https://uapis.cn/api/v1/misc/weather";
 
@@ -257,12 +257,14 @@ const indexKeys = ["clothing", "uv", "umbrella", "exercise", "cold_risk", "comfo
 const STORAGE_KEY = "weather-city";
 
 export default function WeatherApp() {
+  const savedCity = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
   const [city, setCity] = useState("");
-  const [inputCity, setInputCity] = useState("");
+  const [inputCity, setInputCity] = useState(savedCity || "");
   const [data, setData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"now" | "forecast" | "indices">("now");
+  const inited = useRef(false);
 
   const fetchWeather = useCallback(async (query?: string) => {
     setLoading(true);
@@ -275,7 +277,31 @@ export default function WeatherApp() {
         indices: "true",
         lang: "zh",
       });
-      if (query) params.set("city", query);
+
+      if (query) {
+        params.set("city", query);
+      } else {
+        // 尝试浏览器定位 → 反解城市名
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            if (!navigator.geolocation) return reject(new Error("不支持定位"));
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, maximumAge: 600000, enableHighAccuracy: true });
+          });
+          const { latitude, longitude } = pos.coords;
+          // Nominatim 免费反向地理编码，支持中文
+          const geoRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=zh-CN`
+          );
+          if (geoRes.ok) {
+            const geo = await geoRes.json();
+            const addr = geo.address || {};
+            const cityName = addr.city || addr.town || addr.county || addr.state;
+            if (cityName) params.set("city", cityName);
+          }
+        } catch {
+          // 浏览器定位失败，不设 city，走 IP 定位
+        }
+      }
 
       const res = await fetch(`${API_BASE}?${params.toString()}`);
       if (!res.ok) {
@@ -294,14 +320,10 @@ export default function WeatherApp() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      setInputCity(saved);
-      fetchWeather(saved);
-    } else {
-      fetchWeather();
-    }
-  }, [fetchWeather]);
+    if (inited.current) return;
+    inited.current = true;
+    fetchWeather(savedCity || undefined);
+  }, [fetchWeather, savedCity]);
 
   const handleSearch = () => {
     const q = inputCity.trim();

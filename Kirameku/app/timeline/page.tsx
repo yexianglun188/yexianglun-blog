@@ -68,8 +68,7 @@ export default function TimelinePage() {
   const router = useRouter();
   const [allPosts, setAllPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [offsetX, setOffsetX] = useState(0);
-  const dragRef = useRef({ active: false, startX: 0, startOffset: 0, moved: false });
+  const didDrag = useRef(false);
 
   useEffect(() => {
     getPosts({ status: "published", page: 1, size: 200 })
@@ -78,25 +77,8 @@ export default function TimelinePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function handleMouseDown(e: React.MouseEvent) {
-    e.preventDefault();
-    dragRef.current = { active: true, startX: e.pageX, startOffset: offsetX, moved: false };
-  }
-
-  function handleMouseMove(e: React.MouseEvent) {
-    const d = dragRef.current;
-    if (!d.active) return;
-    const dx = e.pageX - d.startX;
-    if (Math.abs(dx) > 5) d.moved = true;
-    setOffsetX(d.startOffset + dx);
-  }
-
-  function handleMouseUp() {
-    dragRef.current.active = false;
-  }
-
   function handlePostClick(e: React.MouseEvent, slug: string) {
-    if (dragRef.current.moved) {
+    if (didDrag.current) {
       e.preventDefault();
       return;
     }
@@ -199,14 +181,17 @@ export default function TimelinePage() {
       </motion.div>
 
       {/* 拖动区 */}
-        <div
-          className="overflow-hidden pb-4 cursor-grab select-none"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          <div style={{ transform: `translateX(${offsetX}px)`, willChange: "transform" }}>
+        <div className="overflow-hidden pb-4 select-none">
+          <motion.div
+            drag="x"
+            dragMomentum
+            dragElastic={0.1}
+            dragConstraints={{ left: -(totalWidth - (typeof window !== "undefined" ? window.innerWidth : 1200)), right: 0 }}
+            initial={{ x: -(PADDING - (typeof window !== "undefined" ? (window.innerWidth - CARD_W) / 2 : 300)) }}
+            onDragStart={() => { didDrag.current = true; }}
+            onDragEnd={() => { setTimeout(() => { didDrag.current = false; }, 100); }}
+            className="cursor-grab active:cursor-grabbing"
+          >
           <svg width={totalWidth} height={svgHeight} viewBox={`0 ${SVG_TOP} ${totalWidth} ${svgHeight}`} className="block">
             <defs>
               {/* 河流渐变 */}
@@ -328,7 +313,7 @@ export default function TimelinePage() {
               );
             })}
           </svg>
-          </div>
+          </motion.div>
         </div>
 
       {/* 提示 */}

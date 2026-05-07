@@ -24,7 +24,7 @@ export default function LatestPostsCarousel() {
   useEffect(() => {
     getPosts({ status: "published", page: 1, size: 4 })
       .then(setPosts)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   if (!posts.length) {
@@ -44,7 +44,7 @@ export default function LatestPostsCarousel() {
       {/* Hero 大图 */}
       <Link
         href={`/posts/${hero.slug}`}
-        className="relative flex-1 min-h-[160px] rounded-3xl overflow-hidden group cursor-pointer"
+        className="relative flex-1 min-h-[160px] md:min-h-[160px] rounded-3xl overflow-hidden group cursor-pointer"
       >
         <Image
           src={hero.cover || "/images/default-cover.jpg"}

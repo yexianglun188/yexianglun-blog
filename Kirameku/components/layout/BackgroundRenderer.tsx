@@ -23,6 +23,8 @@ export default function BackgroundRenderer() {
               backgroundImage: `url(${bgImage || siteConfig.bgImages[0]})`,
             }}
           />
+          {/* 深色模式遮罩 */}
+          <div className="absolute inset-0 bg-transparent dark:bg-black/60 transition-colors duration-500" />
           {bgBlur > 0 && (
             <div
               className="absolute inset-0"

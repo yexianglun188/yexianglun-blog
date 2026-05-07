@@ -22,7 +22,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-72 glass-card p-4 shadow-2xl z-50">
+    <div className="absolute right-0 top-full mt-2 w-72 p-4 shadow-2xl z-50 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/50 dark:border-white/10">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-bold text-slate-900 dark:text-white">设置</h3>
       </div>

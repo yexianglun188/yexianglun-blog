@@ -1,16 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getPostsCount, getAlbums } from "@/app/api";
+import { getPostsCount, getAlbums, getChattersCount } from "@/app/api";
 import { siteConfig } from "@/siteConfig";
 
 export default function ProfileCard() {
   const [postCount, setPostCount] = useState(0);
+  const [chatterCount, setChatterCount] = useState(0);
   const [photoCount, setPhotoCount] = useState(0);
 
   useEffect(() => {
     getPostsCount("published")
       .then((data) => setPostCount(data.count ?? 0))
+      .catch(() => {});
+
+    getChattersCount("published")
+      .then((data) => setChatterCount(data.count ?? 0))
       .catch(() => {});
 
     getAlbums()
@@ -55,7 +60,7 @@ export default function ProfileCard() {
           />
           <div className="w-px h-10 bg-slate-300/50 dark:bg-slate-700 hidden md:block" />
           <StatItem
-            count={0}
+            count={chatterCount}
             label="说说"
             color="text-purple-600 dark:text-purple-400"
           />

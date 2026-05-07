@@ -305,9 +305,13 @@ export default function MomentsPage() {
                         {/* 头部 */}
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-400 to-indigo-400 flex items-center justify-center text-white text-xs font-bold">
-                              S
-                            </div>
+                            <Image
+                              src="/images/hong.jpg"
+                              alt="avatar"
+                              width={28}
+                              height={28}
+                              className="rounded-full object-cover"
+                            />
                             <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                               {siteConfig.authorName}
                             </span>

@@ -46,15 +46,19 @@ export const siteConfig = {
   },
 
   // 站点信息
-  buildDate: "2026-05-03T00:00:00",
+  buildDate: "2026-05-07T12:00:00",
   footerBadges: [
     { name: "Next.js 15", color: "text-sky-500" },
     { name: "React 19", color: "text-cyan-400" },
     { name: "Tailwind 4", color: "text-teal-400" },
   ],
   icpConfig: {
-    name: "赣ICP备2025078417号-1",
+    name: "赣ICP备2025078417号",
     link: "https://beian.miit.gov.cn/",
+  },
+  moeIcpConfig: {
+    name: "萌ICP备20260527号",
+    link: "https://icp.gov.moe/?keyword=20260527",
   },
 
   // 分类标题

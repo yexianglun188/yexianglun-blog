@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind CSS 4 class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ========== 毛玻璃基础样式 ========== */
 
 /* backdrop-filter 由 Tailwind 类自行处理，不全局覆盖 */
@@ -148,4 +151,12 @@
 
 #waifu-toggle {
   z-index: 40 !important;
+}
+
+/* 移动端隐藏看板娘 */
+@media (max-width: 767px) {
+  #waifu,
+  #waifu-toggle {
+    display: none !important;
+  }
 }

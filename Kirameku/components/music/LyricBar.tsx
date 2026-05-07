@@ -57,7 +57,7 @@ export default function LyricBar() {
         onClick={() => { if (!isPlaying && saying) refreshSaying(); }}
       >
         {/* Waveform */}
-        <div className="flex items-end justify-center gap-[4px] h-8 w-16">
+        <div className="flex items-end justify-center gap-[4px] h-8 w-10 md:w-16">
           {waves.map((wave, i) => (
             <div
               key={i}
@@ -70,15 +70,15 @@ export default function LyricBar() {
         </div>
 
         {/* Lyric / Saying */}
-        <div className="flex-1 px-8 flex justify-center items-center overflow-hidden">
-          <p className="text-white text-lg font-bold tracking-widest truncate drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]">
+        <div className="flex-1 px-3 md:px-8 flex justify-center items-center overflow-hidden">
+          <p className="text-white text-sm md:text-lg font-bold tracking-wider md:tracking-widest truncate drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]">
             {displayedText || (isPlaying ? "♪ ♪" : saying || "暂无歌词，点击换一句")}
             <span className="inline-block w-[3px] h-5 bg-indigo-400 align-middle ml-1 shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-cursor" />
           </p>
         </div>
 
         {/* Music icon */}
-        <div className="w-16 flex justify-end">
+        <div className="w-10 md:w-16 flex justify-end">
           <svg
             className={`w-6 h-6 text-indigo-400/50 transition-all duration-500 ${isPlaying ? "animate-bounce" : "opacity-30"}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor"

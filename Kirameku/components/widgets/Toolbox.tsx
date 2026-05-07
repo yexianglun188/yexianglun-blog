@@ -6,7 +6,6 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
-  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -307,7 +306,7 @@ function SortableAppIcon({
       style={style}
       {...attributes}
       {...listeners}
-      className="touch-none"
+      className=""
     >
       <button
         type="button"
@@ -396,6 +395,7 @@ export default function Toolbox() {
   const [panelH, setPanelH] = useState(560);
   const panelDidDrag = useRef(false);
   const panelDragControls = useDragControls();
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   useEffect(() => {
     if (!initialized.current) {
@@ -440,7 +440,6 @@ export default function Toolbox() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -463,9 +462,11 @@ export default function Toolbox() {
   const currentApp = allApps.find((a) => a.id === activeApp);
 
   const panelStyle: React.CSSProperties = btnRect
-    ? flipX
-      ? { position: "fixed", right: window.innerWidth - btnRect.left - 48 - resizeOffset.x, ...(flipY ? { top: btnRect.top + 48 + 8 + resizeOffset.y } : { bottom: window.innerHeight - btnRect.top + 16 - resizeOffset.y }) }
-      : { position: "fixed", left: btnRect.left + resizeOffset.x, ...(flipY ? { top: btnRect.top + 48 + 8 + resizeOffset.y } : { bottom: window.innerHeight - btnRect.top + 16 - resizeOffset.y }) }
+    ? isMobile
+      ? { position: "fixed", left: "8%", right: "8%", top: "10%", bottom: "10%" }
+      : flipX
+        ? { position: "fixed", right: window.innerWidth - btnRect.left - 48 - resizeOffset.x, ...(flipY ? { top: btnRect.top + 48 + 8 + resizeOffset.y } : { bottom: window.innerHeight - btnRect.top + 16 - resizeOffset.y }) }
+        : { position: "fixed", left: btnRect.left + resizeOffset.x, ...(flipY ? { top: btnRect.top + 48 + 8 + resizeOffset.y } : { bottom: window.innerHeight - btnRect.top + 16 - resizeOffset.y }) }
     : {};
 
   return (
@@ -474,7 +475,7 @@ export default function Toolbox() {
       <AnimatePresence>
         {isOpen && btnRect && (
           <motion.div
-            drag
+            drag={!isMobile}
             dragControls={panelDragControls}
             dragListener={false}
             dragMomentum={false}
@@ -488,13 +489,13 @@ export default function Toolbox() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ ...panelStyle, zIndex: 30, x: panelOffset.x, y: panelOffset.y, width: panelW, height: panelH }}
+            style={{ ...panelStyle, zIndex: 30, x: isMobile ? 0 : panelOffset.x, y: isMobile ? 0 : panelOffset.y, ...(isMobile ? {} : { width: panelW, height: panelH }) }}
             className="rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col"
             ref={panelRef}
           >
-            {/* 手机顶部状态栏 - 拖拽把手 */}
+            {/* 顶部拖拽把手 */}
             <div
-              onPointerDown={(e) => panelDragControls.start(e)}
+              onPointerDown={isMobile ? undefined : (e) => panelDragControls.start(e)}
               className="flex items-center justify-between px-5 pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing"
             >
               <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
@@ -529,10 +530,10 @@ export default function Toolbox() {
                 </div>
               </div>
             ) : (
-              <div className="px-5 pt-4 flex-1 overflow-auto">
+              <div className="px-6 pt-5 pb-10 flex-1 overflow-y-auto overflow-x-hidden">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <SortableContext items={orderedApps.map((a) => a.id)} strategy={rectSortingStrategy}>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-5 md:gap-4">
                       {orderedApps.map((app) => (
                         <SortableAppIcon
                           key={app.id}
@@ -552,43 +553,47 @@ export default function Toolbox() {
             </div>
 
             {/* 缩放把手 */}
-            <ResizeHandle
-              dir="bottom-right"
-              onResize={(dw, dh) => {
-                setPanelW((w) => Math.min(Math.max(w + dw, 200), 600));
-                setPanelH((h) => Math.min(Math.max(h + dh, 300), 800));
-              }}
-            />
-            <ResizeHandle
-              dir="top-left"
-              onResize={(dw, dh) => {
-                const newW = Math.min(Math.max(panelW + dw, 200), 600);
-                const newH = Math.min(Math.max(panelH + dh, 300), 800);
-                const actualDw = newW - panelW;
-                const actualDh = newH - panelH;
-                setPanelW(newW);
-                setPanelH(newH);
-                setResizeOffset((p) => ({ x: p.x - actualDw, y: p.y - actualDh }));
-              }}
-            />
-            <ResizeHandle
-              dir="top-right"
-              onResize={(_dw, dh) => {
-                const newH = Math.min(Math.max(panelH + dh, 300), 800);
-                const actualDh = newH - panelH;
-                setPanelH(newH);
-                setResizeOffset((p) => ({ x: p.x, y: p.y - actualDh }));
-              }}
-            />
-            <ResizeHandle
-              dir="bottom-left"
-              onResize={(dw, _dh) => {
-                const newW = Math.min(Math.max(panelW + dw, 200), 600);
-                const actualDw = newW - panelW;
-                setPanelW(newW);
-                setResizeOffset((p) => ({ x: p.x - actualDw, y: p.y }));
-              }}
-            />
+            {!isMobile && (
+              <>
+                <ResizeHandle
+                  dir="bottom-right"
+                  onResize={(dw, dh) => {
+                    setPanelW((w) => Math.min(Math.max(w + dw, 200), 600));
+                    setPanelH((h) => Math.min(Math.max(h + dh, 300), 800));
+                  }}
+                />
+                <ResizeHandle
+                  dir="top-left"
+                  onResize={(dw, dh) => {
+                    const newW = Math.min(Math.max(panelW + dw, 200), 600);
+                    const newH = Math.min(Math.max(panelH + dh, 300), 800);
+                    const actualDw = newW - panelW;
+                    const actualDh = newH - panelH;
+                    setPanelW(newW);
+                    setPanelH(newH);
+                    setResizeOffset((p) => ({ x: p.x - actualDw, y: p.y - actualDh }));
+                  }}
+                />
+                <ResizeHandle
+                  dir="top-right"
+                  onResize={(_dw, dh) => {
+                    const newH = Math.min(Math.max(panelH + dh, 300), 800);
+                    const actualDh = newH - panelH;
+                    setPanelH(newH);
+                    setResizeOffset((p) => ({ x: p.x, y: p.y - actualDh }));
+                  }}
+                />
+                <ResizeHandle
+                  dir="bottom-left"
+                  onResize={(dw, _dh) => {
+                    const newW = Math.min(Math.max(panelW + dw, 200), 600);
+                    const actualDw = newW - panelW;
+                    setPanelW(newW);
+                    setResizeOffset((p) => ({ x: p.x - actualDw, y: p.y }));
+                  }}
+                />
+              </>
+            )}
 
             {/* 缩放角标 */}
             <div className="absolute bottom-1.5 right-1.5 pointer-events-none opacity-30">
