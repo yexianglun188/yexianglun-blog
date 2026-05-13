@@ -61,3 +61,6 @@ uploads/
 # 其他
 .eslintcache
 report.html
+
+# 阅读服务端
+reader-master/

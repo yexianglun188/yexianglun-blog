@@ -311,7 +311,7 @@ onMounted(() => onSearch());
           <div class="flex items-center gap-4">
             <div
               v-if="form.avatar"
-              class="relative w-16 h-16 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700"
+              class="relative w-16 h-16 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0"
             >
               <el-image :src="form.avatar" fit="cover" class="w-full h-full" />
               <el-icon
@@ -333,10 +333,16 @@ onMounted(() => onSearch());
               accept="image/*"
             >
               <el-button :loading="uploading" type="primary" plain>
-                {{ form.avatar ? "更换头像" : "上传头像" }}
+                {{ form.avatar ? "更换" : "上传头像" }}
               </el-button>
             </el-upload>
           </div>
+          <el-input
+            v-model="form.avatar"
+            placeholder="或直接输入头像链接 https://..."
+            class="mt-2"
+            clearable
+          />
         </el-form-item>
         <el-form-item label="描述">
           <el-input

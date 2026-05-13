@@ -35,6 +35,24 @@ import {
   type GitHubUser,
 } from "@/app/api/messages";
 
+// 递归展平嵌套回复，附带"回复谁"信息
+function flattenReplies(
+  replies: MessageItem[],
+  parentMap?: Map<number, string>
+): (MessageItem & { replyToUser?: string })[] {
+  const map = parentMap ?? new Map<number, string>();
+  const result: (MessageItem & { replyToUser?: string })[] = [];
+  for (const r of replies) {
+    const replyToUser = map.get(r.parent_id!);
+    result.push(replyToUser ? { ...r, replyToUser } : r);
+    if (r.replies?.length) {
+      map.set(r.id, r.github_user?.login ?? "匿名用户");
+      result.push(...flattenReplies(r.replies, map));
+    }
+  }
+  return result;
+}
+
 function relativeTime(dateStr: string): string {
   const d = new Date(dateStr);
   const now = new Date();
@@ -150,15 +168,30 @@ export default function MessagesPage() {
         parent_id: replyTo?.id,
       });
       if (replyTo) {
-        // 回复：添加到父留言的 replies
+        // 回复：找到顶层父留言，添加到其 replies
+        // 递归查找包含 targetId 的顶层留言
+        function findTopLevelId(msgs: MessageItem[], targetId: number): number | null {
+          for (const m of msgs) {
+            if (m.id === targetId) return m.id;
+            for (const r of m.replies ?? []) {
+              if (r.id === targetId) return m.id;
+              // 二级嵌套
+              for (const rr of r.replies ?? []) {
+                if (rr.id === targetId) return m.id;
+              }
+            }
+          }
+          return null;
+        }
+        const parentId = findTopLevelId(messages, replyTo.id) ?? replyTo.id;
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === replyTo.id
+            m.id === parentId
               ? { ...m, replies: [...m.replies, newMsg] }
               : m
           )
         );
-        setExpandedReplies((prev) => new Set([...prev, replyTo.id]));
+        setExpandedReplies((prev) => new Set([...prev, parentId]));
       } else {
         // 新留言：添加到顶部
         setMessages((prev) => [newMsg, ...prev]);
@@ -431,7 +464,8 @@ function MessageCard({
   user: GitHubUser | null;
 }) {
   const isExpanded = expandedReplies.has(msg.id);
-  const replyCount = msg.replies?.length ?? 0;
+  const flatReplies = flattenReplies(msg.replies ?? []);
+  const replyCount = flatReplies.length;
 
   return (
     <div className="rounded-2xl bg-white/50 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
@@ -529,7 +563,7 @@ function MessageCard({
             className="overflow-hidden"
           >
             <div className="border-t border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30">
-              {msg.replies.map((reply) => (
+              {flatReplies.map((reply) => (
                 <ReplyCard
                   key={reply.id}
                   reply={reply}
@@ -554,7 +588,7 @@ function ReplyCard({
   onReply,
   user,
 }: {
-  reply: MessageItem;
+  reply: MessageItem & { replyToUser?: string };
   likedIds: Set<number>;
   onLike: (id: number) => void;
   onReply: (msg: MessageItem) => void;
@@ -586,6 +620,11 @@ function ReplyCard({
             </span>
           </div>
           <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
+            {reply.replyToUser && (
+              <span className="text-sky-500 dark:text-sky-400 mr-1">
+                回复 @{reply.replyToUser}：
+              </span>
+            )}
             {reply.content}
           </p>
           <div className="flex items-center gap-2 md:gap-3 mt-1.5 md:mt-2">

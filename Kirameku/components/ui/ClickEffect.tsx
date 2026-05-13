@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
+import { useEffects } from "@/components/providers/EffectProvider";
 
 interface Particle {
   x: number;
@@ -24,11 +26,15 @@ const COLORS = [
 ];
 
 export default function ClickEffect() {
+  const pathname = usePathname();
+  const { clickEffect } = useEffects();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particles = useRef<Particle[]>([]);
   const animFrame = useRef<number>(0);
+  const disabled = pathname?.startsWith("/garden/") || !clickEffect;
 
   useEffect(() => {
+    if (disabled) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -86,7 +92,9 @@ export default function ClickEffect() {
       window.removeEventListener("click", onClick);
       cancelAnimationFrame(animFrame.current);
     };
-  }, []);
+  }, [disabled]);
+
+  if (disabled) return null;
 
   return (
     <canvas

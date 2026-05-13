@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -17,12 +17,14 @@ import {
   Loader2,
 } from "lucide-react";
 import { getPostBySlug, type PostDetail } from "@/app/api";
+import ReadingProgress from "@/components/ui/ReadingProgress";
 
 export default function PostDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<PostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -80,6 +82,7 @@ export default function PostDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
+      <ReadingProgress contentRef={contentRef} />
       {/* 返回按钮 */}
       <motion.div
         initial={{ opacity: 0, x: -10 }}
@@ -152,7 +155,7 @@ export default function PostDetailPage() {
           </div>
 
           {/* 文章内容 */}
-          <div className="relative">
+          <div className="relative" ref={contentRef}>
             <style>{`
               .post-content ul {
                 list-style-type: disc !important;

@@ -42,7 +42,10 @@ const ENEMY_DEFS: Record<string, { w: number; h: number; hp: number; speed: numb
 export default function ShooterGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(0);
+  const [best, setBest] = useState(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    return saved ? Number(saved) : 0;
+  });
   const [lives, setLives] = useState(3);
   const [wave, setWave] = useState(1);
   const [gameOver, setGameOver] = useState(false);
@@ -113,11 +116,6 @@ export default function ShooterGame() {
     }));
   }, []);
 
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setBest(Number(saved));
-    initGame();
-  }, [initGame]);
 
   // ── Particles ──
   const spawnExplosion = (x: number, y: number, color: string, count = 12) => {
@@ -144,7 +142,7 @@ export default function ShooterGame() {
       const bossHp = 60 + w * 10;
       enemiesRef.current.push({
         x: W / 2 - 40, y: -70, ...ENEMY_DEFS.boss,
-        hp: bossHp, maxHp: bossHp, type: "boss",
+        hp: bossHp, maxHp: bossHp, type: "boss", t: 0,
       });
       waveEnemiesLeft.current = 1;
       pendingSpawns.current = 0;
@@ -165,7 +163,7 @@ export default function ShooterGame() {
           enemiesRef.current.push({
             x: rand(10, W - def.w - 10),
             y: -def.h - rand(0, 60),
-            ...def, type, t: Math.random() * Math.PI * 2,
+            ...def, maxHp: def.hp, type, t: Math.random() * Math.PI * 2,
           });
         }, i * 300);
       }

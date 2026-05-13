@@ -29,7 +29,7 @@ function createBoard(rows: number, cols: number, mines: number, safeR?: number, 
     const r = Math.floor(Math.random() * rows);
     const c = Math.floor(Math.random() * cols);
     if (board[r][c].mine) continue;
-    if (safeR !== undefined && Math.abs(r - safeR) <= 1 && Math.abs(c - safeC) <= 1) continue;
+    if (safeR !== undefined && safeC !== undefined && Math.abs(r - safeR) <= 1 && Math.abs(c - safeC) <= 1) continue;
     board[r][c].mine = true;
     placed++;
   }

@@ -7,7 +7,7 @@ export default function BackgroundRenderer() {
   const { bgImage, bgBlur } = useBackground();
 
   return (
-    <div className="fixed inset-0 -z-10">
+    <div className="fixed inset-0 -z-10 h-lvh">
       {siteConfig.useGradient ? (
         <div
           className="absolute inset-0 gradient-background"

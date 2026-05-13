@@ -8,6 +8,17 @@ html {
   overflow-y: scroll;
 }
 
+/* 禁用页面文字选中（输入框和代码块除外） */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea, [contenteditable], .prose, code, pre {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* ========== 毛玻璃基础样式 ========== */
 
 /* backdrop-filter 由 Tailwind 类自行处理，不全局覆盖 */
@@ -164,4 +175,54 @@ html {
   #waifu-toggle {
     display: none !important;
   }
+}
+
+/* Recharts 去掉点击黑框 + 交互样式 */
+.recharts-wrapper *:focus,
+.recharts-wrapper *:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.recharts-wrapper svg {
+  outline: none !important;
+}
+
+.recharts-pie-sector {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.recharts-pie-sector {
+  transition: transform 0.2s ease;
+  transform-origin: center;
+}
+
+.recharts-pie-sector:hover {
+  transform: scale(1.06);
+  filter: brightness(1.1);
+}
+
+.recharts-dot {
+  cursor: pointer;
+  transition: r 0.15s ease;
+}
+
+.recharts-dot:hover {
+  r: 6;
+}
+
+.recharts-tooltip-cursor {
+  stroke: rgba(99, 102, 241, 0.2) !important;
+}
+
+/* function-plot 坐标标签不被裁剪 */
+.function-plot svg {
+  overflow: visible !important;
+}
+
+.function-plot .tick text,
+.function-plot .axis-label {
+  fill: rgba(148, 163, 184, 0.7);
+  font-size: 11px;
 }

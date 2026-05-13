@@ -157,7 +157,7 @@ export default function BlackjackGame() {
     const dealerPlay = () => {
       while (handValue(dh) < 17) {
         const result = drawCard(d);
-        dh = [...dh, result.card];
+        dh = [...dh, { ...result.card, hidden: false }];
         d = result.remaining;
       }
       setDealerHand([...dh]);
