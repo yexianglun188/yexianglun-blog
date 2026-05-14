@@ -226,3 +226,13 @@ input, textarea, [contenteditable], .prose, code, pre {
   fill: rgba(148, 163, 184, 0.7);
   font-size: 11px;
 }
+
+@keyframes icon-jelly {
+  0%   { transform: rotate(0deg) scale(1); }
+  15%  { transform: rotate(8deg) scale(1.05); transform-origin: bottom right; }
+  30%  { transform: rotate(-10deg) scale(1.08); transform-origin: bottom left; }
+  45%  { transform: rotate(5deg) scale(1.04); transform-origin: bottom right; }
+  60%  { transform: rotate(-4deg) scale(1.02); transform-origin: bottom left; }
+  75%  { transform: rotate(2deg) scale(1.01); transform-origin: bottom right; }
+  100% { transform: rotate(0deg) scale(1); }
+}

@@ -99,8 +99,8 @@ export default function ReadingPage() {
       className="mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12"
       style={{ maxWidth: settings.contentWidth === "narrow" ? "42rem" : settings.contentWidth === "wide" ? "72rem" : settings.contentWidth === "full" ? "100%" : "56rem" }}
     >
-      <button type="button" onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 hover:text-sky-500 mb-4">
-        <ArrowLeft className="w-4 h-4" /> 返回
+      <button type="button" onClick={() => router.push(`/novel/${params.bookUrl}?source=${encodeURIComponent(bookSourceUrl)}`)} className="flex items-center gap-2 text-slate-500 hover:text-sky-500 mb-4">
+        <ArrowLeft className="w-4 h-4" /> 目录
       </button>
 
       {loading && <LoadingTips />}

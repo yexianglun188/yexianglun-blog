@@ -154,7 +154,7 @@ export default function NovelPage() {
   }, []);
 
   const goToBook = (book: Book) => {
-    router.push(`/novel/${encodeBookUrl(book.bookUrl)}?source=${encodeURIComponent(book.bookSourceUrl || "")}&name=${encodeURIComponent(book.name)}`);
+    router.push(`/novel/${encodeBookUrl(book.bookUrl)}?source=${encodeURIComponent(book.bookSourceUrl || "")}&name=${encodeURIComponent(book.name)}&from=bookshelf`);
   };
 
   const handleSearch = () => {

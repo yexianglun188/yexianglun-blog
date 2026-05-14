@@ -16,6 +16,7 @@ export default function ChapterListPage() {
   const bookUrl = decodeBookUrl(params.bookUrl as string);
   const bookSourceUrl = searchParams.get("source") || "";
   const bookName = searchParams.get("name") || "";
+  const from = searchParams.get("from") || "bookshelf";
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,11 +50,11 @@ export default function ChapterListPage() {
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12" style={{ maxWidth: "56rem" }}>
       <button
         type="button"
-        onClick={() => router.back()}
+        onClick={() => from === "search" ? router.push("/novel/search?q=" + encodeURIComponent(searchParams.get("q") || "")) : router.push("/novel")}
         className="flex items-center gap-2 text-slate-500 hover:text-sky-500 mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
-        返回
+        {from === "search" ? "搜索结果" : "书架"}
       </button>
 
       {loading && <LoadingTips />}

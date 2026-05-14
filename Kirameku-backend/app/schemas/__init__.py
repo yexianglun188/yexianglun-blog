@@ -16,6 +16,10 @@ from app.schemas.album import AlbumCreate, AlbumUpdate, AlbumOut, PhotoCreate, P
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectOut
 from app.schemas.friend_link import FriendLinkCreate, FriendLinkUpdate, FriendLinkOut
 from app.schemas.site_config import SiteConfigUpdate, SiteConfigOut
+from app.schemas.bookmark import (
+    BookmarkCategoryCreate, BookmarkCategoryUpdate, BookmarkCategoryOut,
+    BookmarkSiteCreate, BookmarkSiteUpdate, BookmarkSiteOut, BookmarkFull,
+)
 
 __all__ = [
     "Token", "LoginRequest",
@@ -31,4 +35,6 @@ __all__ = [
     "ProjectCreate", "ProjectUpdate", "ProjectOut",
     "FriendLinkCreate", "FriendLinkUpdate", "FriendLinkOut",
     "SiteConfigUpdate", "SiteConfigOut",
+    "BookmarkCategoryCreate", "BookmarkCategoryUpdate", "BookmarkCategoryOut",
+    "BookmarkSiteCreate", "BookmarkSiteUpdate", "BookmarkSiteOut", "BookmarkFull",
 ]

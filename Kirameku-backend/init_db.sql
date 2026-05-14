@@ -230,7 +230,36 @@ CREATE TABLE IF NOT EXISTS friend_link (
 );
 
 -- ============================================
--- 15. SiteConfig（站点配置）
+-- 15. BookmarkCategory（收藏夹分类）
+-- ============================================
+CREATE TABLE IF NOT EXISTS bookmark_category (
+    id            SERIAL PRIMARY KEY,
+    name          VARCHAR(50)  NOT NULL,
+    icon          VARCHAR(50)  DEFAULT '',
+    description   VARCHAR(200) DEFAULT '',
+    sort          INTEGER      DEFAULT 0,
+    created_at    TIMESTAMP    DEFAULT NOW()
+);
+
+-- ============================================
+-- 16. BookmarkSite（收藏站点）
+-- ============================================
+CREATE TABLE IF NOT EXISTS bookmark_site (
+    id            SERIAL PRIMARY KEY,
+    category_id   INTEGER      NOT NULL REFERENCES bookmark_category(id) ON DELETE CASCADE,
+    name          VARCHAR(100) NOT NULL,
+    url           VARCHAR(300) NOT NULL,
+    icon          VARCHAR(500) DEFAULT '',
+    description   VARCHAR(300) DEFAULT '',
+    platforms     TEXT         DEFAULT '[]',
+    sort          INTEGER      DEFAULT 0,
+    created_at    TIMESTAMP    DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bookmark_site_category ON bookmark_site(category_id);
+
+-- ============================================
+-- 17. SiteConfig（站点配置）
 -- ============================================
 CREATE TABLE IF NOT EXISTS site_config (
     id            SERIAL PRIMARY KEY,

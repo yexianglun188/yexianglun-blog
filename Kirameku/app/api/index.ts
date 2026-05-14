@@ -7,3 +7,4 @@ export * from "./friends";
 export * from "./messages";
 export * from "./comments";
 export * from "./site-config";
+export * from "./bookmarks";
