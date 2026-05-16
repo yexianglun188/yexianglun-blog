@@ -37,6 +37,11 @@ const notoSerifSC = Noto_Serif_SC({
 export const metadata: Metadata = {
   title: siteConfig.title,
   description: siteConfig.bio,
+  alternates: {
+    types: {
+      "application/rss+xml": "/feed",
+    },
+  },
 };
 
 export default function RootLayout({
