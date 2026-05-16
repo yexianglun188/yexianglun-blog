@@ -23,10 +23,8 @@ class ChatterComment(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     chatter_id: int = Field(foreign_key="chatter.id", index=True)
     parent_id: Optional[int] = Field(default=None, foreign_key="chatter_comment.id")
-    nickname: str = Field(max_length=50)
-    email: str = Field(default="", max_length=100)
+    github_user_id: Optional[int] = Field(default=None, foreign_key="github_user.id")
     content: str
-    avatar: str = Field(default="", max_length=500)
     ip: str = Field(default="", max_length=45)
-    status: str = Field(default="pending", max_length=20, index=True)
+    status: str = Field(default="approved", max_length=20, index=True)
     created_at: datetime = Field(default_factory=datetime.now)

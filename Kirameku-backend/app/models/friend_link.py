@@ -14,3 +14,4 @@ class FriendLink(SQLModel, table=True):
     sort: int = Field(default=0)
     is_approved: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)

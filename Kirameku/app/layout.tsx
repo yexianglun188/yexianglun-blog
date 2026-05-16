@@ -12,6 +12,8 @@ import ClientWidgets from "@/components/layout/ClientWidgets";
 import ClickEffect from "@/components/ui/ClickEffect";
 import RadialMenu from "@/components/ui/RadialMenu";
 import MouseTrail from "@/components/ui/MouseTrail";
+import SeasonalEffect from "@/components/ui/SeasonalEffect";
+import KiraSparkle from "@/components/ui/KiraSparkle";
 import WelcomeScreen from "@/components/layout/WelcomeScreen";
 import VisitorTracker from "@/components/layout/VisitorTracker";
 import { siteConfig } from "@/siteConfig";
@@ -60,6 +62,8 @@ export default function RootLayout({
                   <ClickEffect />
                   <RadialMenu />
                   <MouseTrail />
+                  <SeasonalEffect />
+                  <KiraSparkle />
                   <Navbar />
                   <main className="flex-1 pt-16">
                     {children}

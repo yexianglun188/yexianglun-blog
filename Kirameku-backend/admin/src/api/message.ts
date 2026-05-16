@@ -20,6 +20,13 @@ export type MessageItem = {
   replies: MessageItem[];
 };
 
+/** 管理-获取留言总数 */
+export const getAdminMessageCount = (params?: { status?: string }) => {
+  return http.request<{ count: number }>("get", "/api/messages/admin/count", {
+    params
+  });
+};
+
 /** 管理-获取留言列表 */
 export const getAdminMessages = (params?: {
   status?: string;

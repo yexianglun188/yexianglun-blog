@@ -57,3 +57,28 @@ def me(user: dict = Depends(get_current_user), session: Session = Depends(get_se
             "permissions": ["*:*:*"] if db_user.is_admin else [],
         },
     }
+
+
+@router.put("/me")
+def update_me(
+    data: dict,
+    user: dict = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    username = user.get("sub")
+    db_user = session.exec(select(User).where(User.username == username)).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if "nickname" in data:
+        db_user.nickname = data["nickname"]
+    if "email" in data:
+        db_user.email = data["email"]
+    if "bio" in data or "description" in data:
+        db_user.bio = data.get("bio") or data.get("description") or ""
+    if "avatar" in data:
+        db_user.avatar = data["avatar"]
+    db_user.updated_at = datetime.now()
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+    return {"code": 0, "message": "更新成功"}

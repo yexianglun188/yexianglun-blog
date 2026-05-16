@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 
@@ -22,6 +23,8 @@ class CategoryOut(BaseModel):
     description: str
     sort: int
     post_count: int
+    created_at: datetime
+    updated_at: datetime
 
 
 class TagCreate(BaseModel):

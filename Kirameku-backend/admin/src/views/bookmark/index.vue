@@ -56,6 +56,13 @@ const columns: TableColumnList = [
     formatter: ({ created_at }) =>
       created_at?.replace("T", " ").slice(0, 19) ?? ""
   },
+  {
+    label: "修改时间",
+    prop: "updated_at",
+    minWidth: 170,
+    formatter: ({ updated_at }) =>
+      updated_at?.replace("T", " ").slice(0, 19) ?? ""
+  },
   { label: "操作", fixed: "right", width: 250, slot: "operation" }
 ];
 
@@ -271,6 +278,13 @@ const siteColumns: TableColumnList = [
     slot: "platforms"
   },
   { label: "排序", prop: "sort", width: 70 },
+  {
+    label: "修改时间",
+    prop: "updated_at",
+    minWidth: 170,
+    formatter: ({ updated_at }) =>
+      updated_at?.replace("T", " ").slice(0, 19) ?? ""
+  },
   { label: "操作", fixed: "right", width: 160, slot: "siteOperation" }
 ];
 

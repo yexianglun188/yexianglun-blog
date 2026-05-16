@@ -13,6 +13,7 @@ class Category(SQLModel, table=True):
     sort: int = Field(default=0)
     post_count: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 
 
 class Tag(SQLModel, table=True):

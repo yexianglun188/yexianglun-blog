@@ -1,11 +1,5 @@
 import { request, qs } from "./client";
-
-export interface GitHubUser {
-  id: number;
-  login: string;
-  avatar: string;
-  bio: string;
-}
+import type { GitHubUser } from "./types";
 
 export interface MessageItem {
   id: number;

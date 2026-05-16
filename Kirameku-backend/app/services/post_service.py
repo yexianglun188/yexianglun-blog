@@ -24,6 +24,7 @@ def _sync_tags(session: Session, post_id: int, tag_names: list[str]):
             tag = Tag(name=name, slug=slug)
             session.add(tag)
             session.flush()
+        assert tag.id is not None
         session.add(PostTag(post_id=post_id, tag_id=tag.id))
 
     # 更新标签计数
@@ -100,11 +101,11 @@ def get_posts(
         q = q.where(Post.status == status)
     if category:
         cat = session.exec(select(Category).where(Category.slug == category)).first()
-        if cat:
+        if cat and cat.id is not None:
             q = q.where(Post.category_id == cat.id)
     if tag:
         t = session.exec(select(Tag).where(Tag.slug == tag)).first()
-        if t:
+        if t and t.id is not None:
             post_ids = [
                 pt.post_id
                 for pt in session.exec(
@@ -142,10 +143,12 @@ def create_post(session: Session, data: PostCreate) -> dict:
     post_data = data.model_dump(exclude={"tags"})
     post = Post(**post_data)
 
-    # 自动计算字数和阅读时间
+    # 自动计算字数和阅读时间（仅当未手动指定时）
     if post.content:
-        post.word_count = len(post.content)
-        post.reading_time = max(1, post.word_count // 300)
+        if not post.word_count:
+            post.word_count = len(post.content)
+        if not post.reading_time:
+            post.reading_time = max(1, post.word_count // 300)
 
     if post.status == "published" and not post.published_at:
         post.published_at = datetime.now()
@@ -176,8 +179,10 @@ def update_post(session: Session, post_id: int, data: PostUpdate) -> dict:
         setattr(post, k, v)
 
     if post.content:
-        post.word_count = len(post.content)
-        post.reading_time = max(1, post.word_count // 300)
+        if "word_count" not in update_data:
+            post.word_count = len(post.content)
+        if "reading_time" not in update_data:
+            post.reading_time = max(1, post.word_count // 300)
 
     if post.status == "published" and not post.published_at:
         post.published_at = datetime.now()
@@ -214,3 +219,14 @@ def count_posts(session: Session, status: str | None = None) -> int:
     if status:
         q = q.where(Post.status == status)
     return session.exec(q).one()
+
+
+def toggle_like(session: Session, post_id: int, unlike: bool = False) -> dict:
+    post = session.get(Post, post_id)
+    if not post:
+        raise HTTPException(404, "文章不存在")
+    post.likes = max(0, post.likes + (-1 if unlike else 1))
+    session.add(post)
+    session.commit()
+    session.refresh(post)
+    return {"likes": post.likes}

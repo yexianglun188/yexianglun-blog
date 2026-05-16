@@ -46,3 +46,9 @@ export function getPostBySlug(slug: string) {
 export function getPostById(postId: number) {
   return request<PostDetail>(`/api/posts/detail/${postId}`);
 }
+
+export function likePost(postId: number, unlike = false) {
+  return request<{ likes: number }>(`/api/posts/${postId}/${unlike ? "unlike" : "like"}`, {
+    method: "POST",
+  });
+}

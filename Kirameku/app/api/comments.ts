@@ -1,15 +1,14 @@
 import { request } from "./client";
+import type { GitHubUser } from "./types";
 
 export interface CommentItem {
   id: number;
   post_id: number;
   parent_id: number | null;
-  nickname: string;
-  website: string;
   content: string;
-  avatar: string;
   status: string;
   created_at: string;
+  github_user: GitHubUser | null;
   replies: CommentItem[];
 }
 
@@ -20,13 +19,18 @@ export function getPostComments(postId: number) {
 export function createComment(data: {
   post_id: number;
   parent_id?: number;
-  nickname: string;
-  email?: string;
-  website?: string;
   content: string;
 }) {
   return request<CommentItem>("/api/comments", {
     method: "POST",
     body: JSON.stringify(data),
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+    },
   });
+}
+
+function getToken(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("github_token") || "";
 }

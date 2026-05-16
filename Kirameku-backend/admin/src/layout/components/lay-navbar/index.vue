@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted } from "vue";
 import { useNav } from "@/layout/hooks/useNav";
 import LaySearch from "../lay-search/index.vue";
 import LayNotice from "../lay-notice/index.vue";
@@ -7,12 +8,25 @@ import { useTranslationLang } from "@/layout/hooks/useTranslationLang";
 import LaySidebarFullScreen from "../lay-sidebar/components/SidebarFullScreen.vue";
 import LaySidebarBreadCrumb from "../lay-sidebar/components/SidebarBreadCrumb.vue";
 import LaySidebarTopCollapse from "../lay-sidebar/components/SidebarTopCollapse.vue";
+import { getMine } from "@/api/user";
+import { useUserStoreHook } from "@/store/modules/user";
 
 import GlobalizationIcon from "@/assets/svg/globalization.svg?component";
 import AccountSettingsIcon from "~icons/ri/user-settings-line";
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
 import Setting from "~icons/ri/settings-3-line";
 import Check from "~icons/ep/check";
+
+// 页面加载时从 API 刷新用户信息（解决改昵称后导航栏不同步的问题）
+onMounted(async () => {
+  try {
+    const { code, data } = await getMine();
+    if (code === 0) {
+      useUserStoreHook().SET_NICKNAME(data.nickname);
+      useUserStoreHook().SET_AVATAR(data.avatar);
+    }
+  } catch {}
+});
 
 const {
   layout,

@@ -16,22 +16,35 @@ export type ChatterCommentItem = {
   id: number;
   chatter_id: number;
   parent_id: number | null;
-  nickname: string;
-  email: string;
   content: string;
-  avatar: string;
+  github_user: {
+    id: number;
+    login: string;
+    avatar: string;
+    bio: string;
+  } | null;
   ip: string;
   status: string;
   created_at: string;
+  replies: ChatterCommentItem[];
 };
 
-/** 获取说说列表 */
+/** 获取说说列表（公开，仅已发布） */
 export const getChatters = (params?: {
   status?: string;
   page?: number;
   size?: number;
 }) => {
   return http.request<ChatterItem[]>("get", "/api/chatters", { params });
+};
+
+/** 获取说说列表（管理，支持全部状态） */
+export const getAdminChatters = (params?: {
+  status?: string;
+  page?: number;
+  size?: number;
+}) => {
+  return http.request<ChatterItem[]>("get", "/api/chatters/admin", { params });
 };
 
 /** 获取说说总数 */
@@ -46,7 +59,7 @@ export const getChatterById = (chatterId: number) => {
   return http.request<ChatterItem>("get", `/api/chatters/${chatterId}`);
 };
 
-/** 获取说说评论 */
+/** 获取说说评论（公开） */
 export const getChatterComments = (chatterId: number) => {
   return http.request<ChatterCommentItem[]>(
     "get",
@@ -54,11 +67,42 @@ export const getChatterComments = (chatterId: number) => {
   );
 };
 
+/** 获取说说评论列表（管理） */
+export const getAdminChatterComments = (params?: {
+  status?: string;
+  page?: number;
+  size?: number;
+}) => {
+  return http.request<ChatterCommentItem[]>(
+    "get",
+    "/api/chatters/comments/admin",
+    { params }
+  );
+};
+
+/** 更新评论状态（管理） */
+export const updateChatterCommentStatus = (
+  commentId: number,
+  status: string
+) => {
+  return http.request<ChatterCommentItem>(
+    "put",
+    `/api/chatters/comments/${commentId}/status`,
+    { data: { status } }
+  );
+};
+
+/** 删除评论（管理） */
+export const deleteChatterComment = (commentId: number) => {
+  return http.request<{ ok: boolean }>(
+    "delete",
+    `/api/chatters/comments/${commentId}`
+  );
+};
+
 /** 创建说说评论（公开） */
 export const createChatterComment = (data: {
   chatter_id: number;
-  nickname: string;
-  email?: string;
   content: string;
   parent_id?: number;
 }) => {

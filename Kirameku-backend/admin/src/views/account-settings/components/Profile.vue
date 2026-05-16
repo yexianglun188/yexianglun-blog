@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { formUpload } from "@/api/mock";
 import { message } from "@/utils/message";
 import { onMounted, reactive, ref } from "vue";
-import { type UserInfo, getMine } from "@/api/user";
+import { type UserInfo, getMine, updateMine } from "@/api/user";
+import { uploadImage } from "@/api/album";
 import type { FormInstance, FormRules } from "element-plus";
 import ReCropperPreview from "@/components/ReCropperPreview";
 import { createFormData, deviceDetection } from "@pureadmin/utils";
+import { useUserStoreHook } from "@/store/modules/user";
 import uploadLine from "~icons/ri/upload-line";
 
 defineOptions({
@@ -18,6 +19,8 @@ const cropRef = ref();
 const uploadRef = ref();
 const isShow = ref(false);
 const userInfoFormRef = ref<FormInstance>();
+const submitting = ref(false);
+const avatarUploading = ref(false);
 
 const userInfos = reactive({
   avatar: "",
@@ -68,34 +71,47 @@ const handleClose = () => {
 
 const onCropper = ({ blob }) => (cropperBlob.value = blob);
 
-const handleSubmitImage = () => {
-  const formData = createFormData({
-    files: new File([cropperBlob.value], "avatar")
-  });
-  formUpload(formData)
-    .then(({ code }) => {
-      if (code === 0) {
-        message("更新头像成功", { type: "success" });
-        handleClose();
-      } else {
-        message("更新头像失败");
-      }
-    })
-    .catch(error => {
-      message(`提交异常 ${error}`, { type: "error" });
+const handleSubmitImage = async () => {
+  if (!cropperBlob.value) return;
+  avatarUploading.value = true;
+  try {
+    const file = new File([cropperBlob.value], "avatar.jpg", {
+      type: "image/jpeg"
     });
+    const res = await uploadImage(file);
+    await updateMine({ avatar: res.url });
+    userInfos.avatar = res.url;
+    useUserStoreHook().SET_AVATAR(res.url);
+    message("头像更新成功", { type: "success" });
+    handleClose();
+  } catch (e: any) {
+    message(e?.message ?? "头像上传失败", { type: "error" });
+  } finally {
+    avatarUploading.value = false;
+  }
 };
 
-// 更新信息
 const onSubmit = async (formEl: FormInstance) => {
-  await formEl.validate((valid, fields) => {
-    if (valid) {
-      console.log(userInfos);
-      message("更新信息成功", { type: "success" });
+  const valid = await formEl.validate().catch(() => false);
+  if (!valid) return;
+  submitting.value = true;
+  try {
+    const { code, message: msg } = await updateMine({
+      nickname: userInfos.nickname,
+      email: userInfos.email,
+      bio: userInfos.description
+    });
+    if (code === 0) {
+      message("更新成功", { type: "success" });
+      useUserStoreHook().SET_NICKNAME(userInfos.nickname);
     } else {
-      console.log("error submit!", fields);
+      message(msg || "更新失败", { type: "error" });
     }
-  });
+  } catch (e: any) {
+    message(e?.message ?? "更新失败", { type: "error" });
+  } finally {
+    submitting.value = false;
+  }
 };
 
 onMounted(async () => {
@@ -162,7 +178,11 @@ onMounted(async () => {
           show-word-limit
         />
       </el-form-item>
-      <el-button type="primary" @click="onSubmit(userInfoFormRef)">
+      <el-button
+        type="primary"
+        :loading="submitting"
+        @click="onSubmit(userInfoFormRef)"
+      >
         更新信息
       </el-button>
     </el-form>
@@ -179,7 +199,13 @@ onMounted(async () => {
       <template #footer>
         <div class="dialog-footer">
           <el-button bg text @click="handleClose">取消</el-button>
-          <el-button bg text type="primary" @click="handleSubmitImage">
+          <el-button
+            bg
+            text
+            type="primary"
+            :loading="avatarUploading"
+            @click="handleSubmitImage"
+          >
             确定
           </el-button>
         </div>

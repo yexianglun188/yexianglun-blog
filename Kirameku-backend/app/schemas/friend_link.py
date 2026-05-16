@@ -28,3 +28,4 @@ class FriendLinkOut(BaseModel):
     sort: int
     is_approved: bool
     created_at: datetime
+    updated_at: datetime | None = None

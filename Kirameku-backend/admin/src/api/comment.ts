@@ -4,14 +4,16 @@ export type CommentItem = {
   id: number;
   post_id: number;
   parent_id: number | null;
-  nickname: string;
-  email: string;
-  website: string;
   content: string;
-  avatar: string;
   ip: string;
   status: string;
   created_at: string;
+  github_user: {
+    id: number;
+    login: string;
+    avatar: string;
+    bio: string;
+  } | null;
 };
 
 /** 获取文章评论列表 */

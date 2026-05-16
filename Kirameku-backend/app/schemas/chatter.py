@@ -2,6 +2,13 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class GitHubUserOut(BaseModel):
+    id: int
+    login: str
+    avatar: str
+    bio: str
+
+
 class ChatterCreate(BaseModel):
     content: str
     images: list[str] = []
@@ -25,14 +32,12 @@ class ChatterOut(BaseModel):
     comments_count: int
     status: str
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None = None
 
 
 class ChatterCommentCreate(BaseModel):
     chatter_id: int
     parent_id: int | None = None
-    nickname: str
-    email: str = ""
     content: str
 
 
@@ -40,9 +45,8 @@ class ChatterCommentOut(BaseModel):
     id: int
     chatter_id: int
     parent_id: int | None
-    nickname: str
     content: str
-    avatar: str
     status: str
     created_at: datetime
+    github_user: GitHubUserOut | None = None
     replies: list["ChatterCommentOut"] = []

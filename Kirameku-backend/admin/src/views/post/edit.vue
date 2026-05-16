@@ -7,6 +7,7 @@ import {
   createPost,
   updatePost
 } from "@/api/post";
+import { uploadImage } from "@/api/album";
 import { getCategories } from "@/api/category";
 import { getTags } from "@/api/tag";
 import type { CategoryItem } from "@/api/category";
@@ -34,13 +35,17 @@ const form = ref({
   category_id: null as number | null,
   tags: [] as string[],
   status: "draft",
-  is_pinned: false
+  is_pinned: false,
+  reading_time: 0,
+  word_count: 0
 });
 
 const categoryList = ref<CategoryItem[]>([]);
 const tagList = ref<TagItem[]>([]);
 const tagInputVisible = ref(false);
 const tagInputValue = ref("");
+const coverUploading = ref(false);
+const coverInputRef = ref<HTMLInputElement>();
 
 const rules = {
   title: [{ required: true, message: "请输入标题", trigger: "blur" }],
@@ -71,6 +76,23 @@ function handleTagConfirm() {
 function addExistingTag(name: string) {
   if (!form.value.tags.includes(name)) {
     form.value.tags.push(name);
+  }
+}
+
+async function handleCoverUpload(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  coverUploading.value = true;
+  try {
+    const res = await uploadImage(file);
+    form.value.cover = res.url;
+    message("封面上传成功", { type: "success" });
+  } catch (e: any) {
+    message(e?.message ?? "上传失败", { type: "error" });
+  } finally {
+    coverUploading.value = false;
+    input.value = "";
   }
 }
 
@@ -117,7 +139,9 @@ onMounted(async () => {
         category_id: null,
         tags: detail.tags || [],
         status: detail.status,
-        is_pinned: detail.is_pinned
+        is_pinned: detail.is_pinned,
+        reading_time: detail.reading_time ?? 0,
+        word_count: detail.word_count ?? 0
       };
       const cat = categoryList.value.find(c => c.name === detail.category);
       if (cat) form.value.category_id = cat.id;
@@ -206,8 +230,43 @@ onMounted(async () => {
           </el-col>
         </el-row>
 
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="阅读时长(分钟)">
+              <el-input-number v-model="form.reading_time" :min="0" class="w-full" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="字数">
+              <el-input-number v-model="form.word_count" :min="0" class="w-full" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
         <el-form-item label="封面图">
-          <el-input v-model="form.cover" placeholder="封面图 URL" />
+          <div class="flex gap-2 w-full">
+            <el-input v-model="form.cover" placeholder="封面图 URL" />
+            <input
+              ref="coverInputRef"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="handleCoverUpload"
+            />
+            <el-button
+              :loading="coverUploading"
+              @click="coverInputRef?.click()"
+            >
+              上传图片
+            </el-button>
+          </div>
+          <el-image
+            v-if="form.cover"
+            :src="form.cover"
+            class="mt-2 rounded"
+            fit="cover"
+            style="max-width: 200px; max-height: 120px"
+          />
         </el-form-item>
 
         <el-form-item label="标签">

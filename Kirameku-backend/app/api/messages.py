@@ -59,6 +59,15 @@ def unlike_message(
 
 # ---- 管理接口 ----
 
+@router.get("/admin/count")
+def admin_message_count(
+    status: str | None = None,
+    session: Session = Depends(get_session),
+    _: dict = Depends(get_current_user),
+):
+    return {"count": message_service.get_message_count(session, status)}
+
+
 @router.get("/admin", response_model=list[MessageOut])
 def admin_list_messages(
     status: str | None = None,

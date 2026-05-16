@@ -98,8 +98,8 @@ def github_callback(
         algorithm=ALGORITHM,
     )
 
-    # 5. 重定向回前端，把 token 带上（通过 query param）
-    redirect_url = f"{FRONTEND_ORIGIN}/messages?token={token}"
+    # 5. 重定向回前端统一回调页，把 token 带上（通过 query param）
+    redirect_url = f"{FRONTEND_ORIGIN}/auth/callback?token={token}"
     return RedirectResponse(redirect_url)
 
 

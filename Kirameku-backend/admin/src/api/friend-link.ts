@@ -9,6 +9,7 @@ export type FriendLinkItem = {
   sort: number;
   is_approved: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 /** 获取友链列表（管理，含未审核） */

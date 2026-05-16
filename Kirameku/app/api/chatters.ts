@@ -1,4 +1,5 @@
 import { request, qs } from "./client";
+import type { GitHubUser } from "./types";
 
 export interface ChatterItem {
   id: number;
@@ -16,11 +17,10 @@ export interface ChatterCommentItem {
   id: number;
   chatter_id: number;
   parent_id: number | null;
-  nickname: string;
   content: string;
-  avatar: string;
   status: string;
   created_at: string;
+  github_user: GitHubUser | null;
   replies: ChatterCommentItem[];
 }
 
@@ -48,15 +48,28 @@ export function getChatterComments(chatterId: number) {
   );
 }
 
+function getToken(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("github_token") || "";
+}
+
 export function createChatterComment(data: {
   chatter_id: number;
   parent_id?: number;
-  nickname: string;
-  email?: string;
   content: string;
 }) {
   return request<ChatterCommentItem>("/api/chatters/comments", {
     method: "POST",
     body: JSON.stringify(data),
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+    },
   });
+}
+
+export function likeChatter(chatterId: number, unlike = false) {
+  return request<{ likes: number }>(
+    `/api/chatters/${chatterId}/${unlike ? "unlike" : "like"}`,
+    { method: "POST" }
+  );
 }

@@ -31,6 +31,7 @@ def update_album(session: Session, album_id: int, data: AlbumUpdate) -> Album:
         raise HTTPException(status_code=404, detail="相册不存在")
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(album, k, v)
+    album.updated_at = datetime.now()
     session.add(album)
     session.commit()
     session.refresh(album)

@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { message as msg } from "@/utils/message";
 import {
   getAdminMessages,
+  getAdminMessageCount,
   updateMessageStatus,
   deleteMessage
 } from "@/api/message";
 import type { MessageItem } from "@/api/message";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import type { PaginationProps } from "@pureadmin/table";
 
 defineOptions({ name: "MessageIndex" });
 
@@ -15,6 +17,13 @@ const loading = ref(false);
 const dataList = ref<MessageItem[]>([]);
 const statusFilter = ref("");
 const expandedRows = ref<number[]>([]);
+
+const pagination = reactive<PaginationProps>({
+  total: 0,
+  pageSize: 20,
+  currentPage: 1,
+  background: true
+});
 
 const columns: TableColumnList = [
   { label: "ID", prop: "id", width: 60 },
@@ -57,12 +66,31 @@ const columns: TableColumnList = [
 async function onSearch() {
   loading.value = true;
   try {
-    const params: any = { size: 100 };
+    const params: any = {
+      page: pagination.currentPage,
+      size: pagination.pageSize
+    };
     if (statusFilter.value) params.status = statusFilter.value;
-    dataList.value = await getAdminMessages(params);
+    const [list, countRes] = await Promise.all([
+      getAdminMessages(params),
+      getAdminMessageCount({ status: statusFilter.value || undefined })
+    ]);
+    dataList.value = list;
+    pagination.total = countRes.count;
   } finally {
     loading.value = false;
   }
+}
+
+function handleSizeChange(val: number) {
+  pagination.pageSize = val;
+  pagination.currentPage = 1;
+  onSearch();
+}
+
+function handleCurrentChange(val: number) {
+  pagination.currentPage = val;
+  onSearch();
 }
 
 async function handleStatus(row: MessageItem, status: string) {
@@ -94,6 +122,24 @@ function toggleExpand(row: MessageItem) {
   }
 }
 
+/** 递归统计所有嵌套回复数 */
+function countAllReplies(msg: MessageItem): number {
+  if (!msg.replies || msg.replies.length === 0) return 0;
+  return msg.replies.reduce((sum, r) => sum + 1 + countAllReplies(r), 0);
+}
+
+/** 递归展开所有嵌套回复为扁平列表 */
+function flattenReplies(replies: MessageItem[], depth = 0): Array<MessageItem & { _depth: number }> {
+  const result: Array<MessageItem & { _depth: number }> = [];
+  for (const r of replies) {
+    result.push({ ...r, _depth: depth });
+    if (r.replies && r.replies.length > 0) {
+      result.push(...flattenReplies(r.replies, depth + 1));
+    }
+  }
+  return result;
+}
+
 onMounted(() => onSearch());
 </script>
 
@@ -109,7 +155,10 @@ onMounted(() => onSearch());
               placeholder="全部状态"
               clearable
               class="w-28"
-              @change="onSearch"
+              @change="
+                pagination.currentPage = 1;
+                onSearch();
+              "
             >
               <el-option label="待审核" value="pending" />
               <el-option label="已通过" value="approved" />
@@ -123,9 +172,12 @@ onMounted(() => onSearch());
         :data="dataList"
         :columns="columns"
         :loading="loading"
+        :pagination="pagination"
         align-whole="center"
         row-key="id"
         table-layout="auto"
+        @page-size-change="handleSizeChange"
+        @page-current-change="handleCurrentChange"
       >
         <template #user="{ row }">
           <div class="flex items-center gap-2">
@@ -205,7 +257,7 @@ onMounted(() => onSearch());
         </template>
       </pure-table>
 
-      <!-- 展开的回复列表 -->
+      <!-- 展开的回复列表（递归显示嵌套回复） -->
       <template v-for="row in dataList" :key="'expand-' + row.id">
         <div
           v-if="
@@ -216,12 +268,13 @@ onMounted(() => onSearch());
           class="mt-2 mb-4 ml-10 border-l-2 border-gray-200 dark:border-gray-700 pl-4"
         >
           <div class="text-sm text-gray-500 mb-2">
-            回复（{{ row.replies.length }}）
+            回复（{{ countAllReplies(row) }}）
           </div>
           <div
-            v-for="reply in row.replies"
+            v-for="reply in flattenReplies(row.replies)"
             :key="reply.id"
             class="flex items-start gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0"
+            :style="{ marginLeft: reply._depth * 32 + 'px' }"
           >
             <el-avatar
               v-if="reply.github_user"

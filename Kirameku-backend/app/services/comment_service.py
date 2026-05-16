@@ -1,17 +1,39 @@
-from datetime import datetime
-from hashlib import md5
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 from fastapi import HTTPException
 
-from app.models import Comment
+from app.models import Comment, GitHubUser
 from app.schemas import CommentCreate
 
 
-def _default_avatar(email: str) -> str:
-    if email:
-        h = md5(email.strip().lower().encode()).hexdigest()
-        return f"https://www.gravatar.com/avatar/{h}?d=mp"
-    return ""
+def _comment_to_dict(session: Session, c: Comment, include_ip: bool = False, fetch_replies: bool = False) -> dict:
+    gh_user = session.get(GitHubUser, c.github_user_id) if c.github_user_id else None
+    d = {
+        "id": c.id,
+        "post_id": c.post_id,
+        "parent_id": c.parent_id,
+        "content": c.content,
+        "status": c.status,
+        "created_at": c.created_at,
+        "github_user": {
+            "id": gh_user.id,
+            "login": gh_user.login,
+            "avatar": gh_user.avatar,
+            "bio": gh_user.bio,
+        } if gh_user else None,
+        "replies": [],
+    }
+    if include_ip:
+        d["ip"] = c.ip
+    if fetch_replies:
+        replies = list(
+            session.exec(
+                select(Comment)
+                .where(Comment.parent_id == c.id)
+                .order_by(Comment.created_at)
+            ).all()
+        )
+        d["replies"] = [_comment_to_dict(session, r, include_ip=include_ip, fetch_replies=True) for r in replies]
+    return d
 
 
 def get_comments_by_post(session: Session, post_id: int) -> list[dict]:
@@ -20,24 +42,13 @@ def get_comments_by_post(session: Session, post_id: int) -> list[dict]:
         session.exec(
             select(Comment)
             .where(Comment.post_id == post_id, Comment.status == "approved")
-            .order_by(Comment.created_at)
+            .order_by(Comment.created_at.desc())
         ).all()
     )
     id_map: dict[int, dict] = {}
     roots: list[dict] = []
     for c in rows:
-        d = {
-            "id": c.id,
-            "post_id": c.post_id,
-            "parent_id": c.parent_id,
-            "nickname": c.nickname,
-            "website": c.website,
-            "content": c.content,
-            "avatar": c.avatar,
-            "status": c.status,
-            "created_at": c.created_at,
-            "replies": [],
-        }
+        d = _comment_to_dict(session, c)
         id_map[c.id] = d
     for c in rows:
         d = id_map[c.id]
@@ -53,33 +64,44 @@ def get_comments_admin(
     status: str | None = None,
     page: int = 1,
     size: int = 20,
-) -> list[Comment]:
-    q = select(Comment)
+) -> list[dict]:
+    q = select(Comment).where(Comment.parent_id.is_(None))
     if status:
         q = q.where(Comment.status == status)
     q = q.order_by(Comment.created_at.desc())
     q = q.offset((page - 1) * size).limit(size)
-    return list(session.exec(q).all())
+    rows = list(session.exec(q).all())
+    return [_comment_to_dict(session, c, include_ip=True, fetch_replies=True) for c in rows]
 
 
-def create_comment(session: Session, data: CommentCreate, ip: str = "") -> Comment:
+def create_comment(
+    session: Session,
+    data: CommentCreate,
+    github_user: GitHubUser | None = None,
+    ip: str = "",
+) -> dict:
+    if not github_user:
+        raise HTTPException(401, "请先登录 GitHub")
+
+    if data.parent_id:
+        parent = session.get(Comment, data.parent_id)
+        if not parent:
+            raise HTTPException(404, "被回复的评论不存在")
+
     comment = Comment(
         post_id=data.post_id,
         parent_id=data.parent_id,
-        nickname=data.nickname,
-        email=data.email,
-        website=data.website,
+        github_user_id=github_user.id,
         content=data.content,
-        avatar=_default_avatar(data.email),
         ip=ip,
     )
     session.add(comment)
     session.commit()
     session.refresh(comment)
-    return comment
+    return _comment_to_dict(session, comment)
 
 
-def update_comment_status(session: Session, comment_id: int, status: str) -> Comment:
+def update_comment_status(session: Session, comment_id: int, status: str) -> dict:
     comment = session.get(Comment, comment_id)
     if not comment:
         raise HTTPException(status_code=404, detail="评论不存在")
@@ -87,7 +109,7 @@ def update_comment_status(session: Session, comment_id: int, status: str) -> Com
     session.add(comment)
     session.commit()
     session.refresh(comment)
-    return comment
+    return _comment_to_dict(session, comment)
 
 
 def delete_comment(session: Session, comment_id: int):

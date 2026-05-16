@@ -12,6 +12,7 @@ class BookmarkCategory(SQLModel, table=True):
     description: str = Field(default="", max_length=200)
     sort: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 
 
 class BookmarkSite(SQLModel, table=True):
@@ -26,3 +27,4 @@ class BookmarkSite(SQLModel, table=True):
     platforms: str = Field(default="[]")
     sort: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)

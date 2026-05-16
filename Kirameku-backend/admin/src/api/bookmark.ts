@@ -7,6 +7,7 @@ export type BookmarkCategoryItem = {
   description: string;
   sort: number;
   created_at: string;
+  updated_at: string;
 };
 
 export type BookmarkSiteItem = {
@@ -19,6 +20,7 @@ export type BookmarkSiteItem = {
   platforms: string[];
   sort: number;
   created_at: string;
+  updated_at: string;
 };
 
 // ---- 分类 ----

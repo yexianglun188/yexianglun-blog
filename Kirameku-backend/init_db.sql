@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS category (
     description   VARCHAR(200) DEFAULT '',
     sort          INTEGER      DEFAULT 0,
     post_count    INTEGER      DEFAULT 0,
-    created_at    TIMESTAMP    DEFAULT NOW()
+    created_at    TIMESTAMP    DEFAULT NOW(),
+    updated_at    TIMESTAMP    DEFAULT NOW()
 );
 
 -- ============================================
@@ -76,27 +77,7 @@ CREATE TABLE IF NOT EXISTS post_tag (
 );
 
 -- ============================================
--- 6. Comment（文章评论）
--- ============================================
-CREATE TABLE IF NOT EXISTS comment (
-    id            SERIAL PRIMARY KEY,
-    post_id       INTEGER      NOT NULL REFERENCES post(id) ON DELETE CASCADE,
-    parent_id     INTEGER      REFERENCES comment(id) ON DELETE CASCADE,
-    nickname      VARCHAR(50)  NOT NULL,
-    email         VARCHAR(100) DEFAULT '',
-    website       VARCHAR(200) DEFAULT '',
-    content       TEXT         NOT NULL,
-    avatar        VARCHAR(500) DEFAULT '',
-    ip            VARCHAR(45)  DEFAULT '',
-    status        VARCHAR(20)  DEFAULT 'pending',
-    created_at    TIMESTAMP    DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_comment_post ON comment(post_id);
-CREATE INDEX IF NOT EXISTS idx_comment_status ON comment(status);
-
--- ============================================
--- 7. GitHubUser（GitHub 登录用户）
+-- 6. GitHubUser（GitHub 登录用户）
 -- ============================================
 CREATE TABLE IF NOT EXISTS github_user (
     id            SERIAL PRIMARY KEY,
@@ -108,6 +89,24 @@ CREATE TABLE IF NOT EXISTS github_user (
 );
 
 CREATE INDEX IF NOT EXISTS idx_github_user_id ON github_user(github_id);
+
+-- ============================================
+-- 7. Comment（文章评论 — GitHub 登录）
+-- ============================================
+CREATE TABLE IF NOT EXISTS comment (
+    id              SERIAL PRIMARY KEY,
+    post_id         INTEGER      NOT NULL REFERENCES post(id) ON DELETE CASCADE,
+    parent_id       INTEGER      REFERENCES comment(id) ON DELETE CASCADE,
+    github_user_id  INTEGER      REFERENCES github_user(id) ON DELETE SET NULL,
+    content         TEXT         NOT NULL,
+    ip              VARCHAR(45)  DEFAULT '',
+    status          VARCHAR(20)  DEFAULT 'approved',
+    created_at      TIMESTAMP    DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_comment_post ON comment(post_id);
+CREATE INDEX IF NOT EXISTS idx_comment_status ON comment(status);
+CREATE INDEX IF NOT EXISTS idx_comment_github_user ON comment(github_user_id);
 
 -- ============================================
 -- 8. Message（留言板/杂谈）
@@ -145,23 +144,22 @@ CREATE TABLE IF NOT EXISTS chatter (
 CREATE INDEX IF NOT EXISTS idx_chatter_status ON chatter(status);
 
 -- ============================================
--- 10. ChatterComment（说说评论）
+-- 10. ChatterComment（说说评论 — GitHub 登录）
 -- ============================================
 CREATE TABLE IF NOT EXISTS chatter_comment (
-    id            SERIAL PRIMARY KEY,
-    chatter_id    INTEGER      NOT NULL REFERENCES chatter(id) ON DELETE CASCADE,
-    parent_id     INTEGER      REFERENCES chatter_comment(id) ON DELETE CASCADE,
-    nickname      VARCHAR(50)  NOT NULL,
-    email         VARCHAR(100) DEFAULT '',
-    content       TEXT         NOT NULL,
-    avatar        VARCHAR(500) DEFAULT '',
-    ip            VARCHAR(45)  DEFAULT '',
-    status        VARCHAR(20)  DEFAULT 'pending',
-    created_at    TIMESTAMP    DEFAULT NOW()
+    id              SERIAL PRIMARY KEY,
+    chatter_id      INTEGER      NOT NULL REFERENCES chatter(id) ON DELETE CASCADE,
+    parent_id       INTEGER      REFERENCES chatter_comment(id) ON DELETE CASCADE,
+    github_user_id  INTEGER      REFERENCES github_user(id) ON DELETE SET NULL,
+    content         TEXT         NOT NULL,
+    ip              VARCHAR(45)  DEFAULT '',
+    status          VARCHAR(20)  DEFAULT 'approved',
+    created_at      TIMESTAMP    DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_chatter_comment_chatter ON chatter_comment(chatter_id);
 CREATE INDEX IF NOT EXISTS idx_chatter_comment_status ON chatter_comment(status);
+CREATE INDEX IF NOT EXISTS idx_chatter_comment_github_user ON chatter_comment(github_user_id);
 
 -- ============================================
 -- 11. Album（相册）
@@ -226,7 +224,8 @@ CREATE TABLE IF NOT EXISTS friend_link (
     description   VARCHAR(300) DEFAULT '',
     sort          INTEGER      DEFAULT 0,
     is_approved   BOOLEAN      DEFAULT FALSE,
-    created_at    TIMESTAMP    DEFAULT NOW()
+    created_at    TIMESTAMP    DEFAULT NOW(),
+    updated_at    TIMESTAMP    DEFAULT NOW()
 );
 
 -- ============================================
@@ -238,7 +237,8 @@ CREATE TABLE IF NOT EXISTS bookmark_category (
     icon          VARCHAR(50)  DEFAULT '',
     description   VARCHAR(200) DEFAULT '',
     sort          INTEGER      DEFAULT 0,
-    created_at    TIMESTAMP    DEFAULT NOW()
+    created_at    TIMESTAMP    DEFAULT NOW(),
+    updated_at    TIMESTAMP    DEFAULT NOW()
 );
 
 -- ============================================
@@ -253,7 +253,8 @@ CREATE TABLE IF NOT EXISTS bookmark_site (
     description   VARCHAR(300) DEFAULT '',
     platforms     TEXT         DEFAULT '[]',
     sort          INTEGER      DEFAULT 0,
-    created_at    TIMESTAMP    DEFAULT NOW()
+    created_at    TIMESTAMP    DEFAULT NOW(),
+    updated_at    TIMESTAMP    DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_bookmark_site_category ON bookmark_site(category_id);

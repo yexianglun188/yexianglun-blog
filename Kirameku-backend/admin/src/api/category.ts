@@ -8,6 +8,7 @@ export type CategoryItem = {
   sort: number;
   post_count: number;
   created_at: string;
+  updated_at: string;
 };
 
 /** 获取分类列表 */

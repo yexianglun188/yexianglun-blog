@@ -24,6 +24,21 @@ def visitor_count(session: Session = Depends(get_session)):
     return {"code": 0, "count": visitor_service.get_visitor_count(session)}
 
 
+@router.get("/location")
+def get_visitor_location(
+    request: Request,
+):
+    """获取当前访问者的地理位置"""
+    ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if not ip:
+        ip = request.headers.get("x-real-ip", "")
+    if not ip:
+        ip = request.client.host if request.client else ""
+
+    geo = visitor_service._fetch_geo(ip)
+    return {"code": 0, "data": geo}
+
+
 @router.post("/record")
 def record_visitor(
     request: Request,

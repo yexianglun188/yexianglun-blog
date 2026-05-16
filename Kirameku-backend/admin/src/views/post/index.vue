@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { message } from "@/utils/message";
-import { getPosts, deletePost } from "@/api/post";
+import { getPosts, deletePost, getPostCount } from "@/api/post";
 import type { PostItem } from "@/api/post";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import type { PaginationProps } from "@pureadmin/table";
 
 defineOptions({ name: "PostIndex" });
 
@@ -12,6 +13,13 @@ const router = useRouter();
 const loading = ref(false);
 const dataList = ref<PostItem[]>([]);
 const statusFilter = ref("");
+
+const pagination = reactive<PaginationProps>({
+  total: 0,
+  pageSize: 20,
+  currentPage: 1,
+  background: true
+});
 
 const columns: TableColumnList = [
   { label: "ID", prop: "id", width: 60 },
@@ -30,13 +38,21 @@ const columns: TableColumnList = [
     slot: "status"
   },
   { label: "浏览", prop: "views", width: 70 },
+  { label: "点赞", prop: "likes", width: 70 },
   { label: "字数", prop: "word_count", width: 70 },
+  { label: "时长", prop: "reading_time", width: 70 },
   {
     label: "发布时间",
     prop: "published_at",
     minWidth: 160,
     formatter: ({ published_at }) =>
       published_at ? published_at.replace("T", " ").slice(0, 19) : "-"
+  },
+  {
+    label: "修改时间",
+    prop: "updated_at",
+    minWidth: 160,
+    formatter: ({ updated_at }) => updated_at?.replace("T", " ").slice(0, 19) ?? ""
   },
   {
     label: "操作",
@@ -49,12 +65,31 @@ const columns: TableColumnList = [
 async function onSearch() {
   loading.value = true;
   try {
-    const params: any = { size: 50 };
+    const params: any = {
+      page: pagination.currentPage,
+      size: pagination.pageSize
+    };
     if (statusFilter.value) params.status = statusFilter.value;
-    dataList.value = await getPosts(params);
+    const [list, countRes] = await Promise.all([
+      getPosts(params),
+      getPostCount({ status: statusFilter.value || undefined })
+    ]);
+    dataList.value = list;
+    pagination.total = countRes.count;
   } finally {
     loading.value = false;
   }
+}
+
+function handleSizeChange(val: number) {
+  pagination.pageSize = val;
+  pagination.currentPage = 1;
+  onSearch();
+}
+
+function handleCurrentChange(val: number) {
+  pagination.currentPage = val;
+  onSearch();
 }
 
 function handleEdit(row: PostItem) {
@@ -90,7 +125,10 @@ onMounted(() => onSearch());
               placeholder="全部状态"
               clearable
               class="w-28"
-              @change="onSearch"
+              @change="
+                pagination.currentPage = 1;
+                onSearch();
+              "
             >
               <el-option label="已发布" value="published" />
               <el-option label="草稿" value="draft" />
@@ -111,9 +149,12 @@ onMounted(() => onSearch());
         :data="dataList"
         :columns="columns"
         :loading="loading"
+        :pagination="pagination"
         align-whole="center"
         row-key="id"
         table-layout="auto"
+        @page-size-change="handleSizeChange"
+        @page-current-change="handleCurrentChange"
       >
         <template #tags="{ row }">
           <el-tag

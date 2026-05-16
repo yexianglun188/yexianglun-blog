@@ -25,6 +25,7 @@ class BookmarkCategoryOut(BaseModel):
     description: str
     sort: int
     created_at: datetime
+    updated_at: datetime | None = None
 
 
 # ---- Site ----
@@ -59,6 +60,7 @@ class BookmarkSiteOut(BaseModel):
     platforms: list[str]
     sort: int
     created_at: datetime
+    updated_at: datetime | None = None
 
 
 class BookmarkFull(BookmarkCategoryOut):

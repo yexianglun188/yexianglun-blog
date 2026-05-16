@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { message } from "@/utils/message";
-import { getVisitors, deleteVisitor, clearVisitors } from "@/api/visitor";
+import { getVisitors, getVisitorCount, deleteVisitor, clearVisitors } from "@/api/visitor";
 import type { VisitorItem } from "@/api/visitor";
+import type { PaginationProps } from "@pureadmin/table";
 
 defineOptions({ name: "VisitorIndex" });
 
 const loading = ref(false);
 const dataList = ref<VisitorItem[]>([]);
+
+const pagination = reactive<PaginationProps>({
+  total: 0,
+  pageSize: 20,
+  currentPage: 1,
+  background: true
+});
 
 const columns: TableColumnList = [
   { label: "ID", prop: "id", width: 60 },
@@ -36,11 +44,29 @@ const columns: TableColumnList = [
 async function onSearch() {
   loading.value = true;
   try {
-    const res = await getVisitors({ size: 100 });
+    const [res, countRes] = await Promise.all([
+      getVisitors({
+        page: pagination.currentPage,
+        size: pagination.pageSize
+      }),
+      getVisitorCount()
+    ]);
     dataList.value = res.data ?? [];
+    pagination.total = countRes.count;
   } finally {
     loading.value = false;
   }
+}
+
+function handleSizeChange(val: number) {
+  pagination.pageSize = val;
+  pagination.currentPage = 1;
+  onSearch();
+}
+
+function handleCurrentChange(val: number) {
+  pagination.currentPage = val;
+  onSearch();
 }
 
 async function handleDelete(row: VisitorItem) {
@@ -84,9 +110,12 @@ onMounted(() => onSearch());
         :data="dataList"
         :columns="columns"
         :loading="loading"
+        :pagination="pagination"
         align-whole="center"
         row-key="id"
         table-layout="auto"
+        @page-size-change="handleSizeChange"
+        @page-current-change="handleCurrentChange"
       >
         <template #location="{ row }">
           <span class="text-sm">

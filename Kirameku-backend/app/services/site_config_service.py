@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from sqlmodel import Session, select
 from fastapi import HTTPException
 
@@ -72,6 +73,7 @@ def update_config(session: Session, key: str, data: SiteConfigUpdate) -> SiteCon
         row.value = data.value
         if data.description:
             row.description = data.description
+    row.updated_at = datetime.now()
     session.add(row)
     session.commit()
     session.refresh(row)
@@ -86,6 +88,7 @@ def batch_update_config(session: Session, configs: dict[str, str]) -> dict:
             row = SiteConfig(key=key, value=json.dumps(value, ensure_ascii=False))
         else:
             row.value = json.dumps(value, ensure_ascii=False)
+        row.updated_at = datetime.now()
         session.add(row)
     session.commit()
     return get_all_config(session)

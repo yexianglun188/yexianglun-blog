@@ -5,6 +5,7 @@ from app.deps import get_session
 from app.schemas import CommentCreate, CommentOut, CommentAdminUpdate
 from app.services import comment_service
 from app.deps import get_current_user
+from app.api.github_auth import get_github_user_optional
 
 router = APIRouter(prefix="/api/comments", tags=["评论"])
 
@@ -18,17 +19,22 @@ def get_post_comments(post_id: int, session: Session = Depends(get_session)):
 
 @router.post("", response_model=CommentOut)
 def create_comment(
-    data: CommentCreate,    
+    data: CommentCreate,
     request: Request,
     session: Session = Depends(get_session),
 ):
-    ip = request.client.host if request.client else ""
-    return comment_service.create_comment(session, data, ip)
+    user = get_github_user_optional(request, session)
+    ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if not ip:
+        ip = request.headers.get("x-real-ip", "")
+    if not ip:
+        ip = request.client.host if request.client else ""
+    return comment_service.create_comment(session, data, user, ip)
 
 
 # ---- 管理接口 ----
 
-@router.get("/admin", response_model=list[CommentOut])
+@router.get("/admin")
 def admin_list_comments(
     status: str | None = None, 
     page: int = Query(1, ge=1),

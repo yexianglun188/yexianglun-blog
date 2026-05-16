@@ -55,6 +55,16 @@ def update_post(
     return post_service.update_post(session, post_id, data)
 
 
+@router.post("/{post_id}/like")
+def like_post(post_id: int, session: Session = Depends(get_session)):
+    return post_service.toggle_like(session, post_id, unlike=False)
+
+
+@router.post("/{post_id}/unlike")
+def unlike_post(post_id: int, session: Session = Depends(get_session)):
+    return post_service.toggle_like(session, post_id, unlike=True)
+
+
 @router.delete("/{post_id}")
 def delete_post(
     post_id: int,

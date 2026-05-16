@@ -40,6 +40,18 @@ export const getMine = () => {
   return http.request<UserInfoResult>("get", "/api/auth/me");
 };
 
+/** 更新当前用户信息 */
+export const updateMine = (data: {
+  nickname?: string;
+  email?: string;
+  bio?: string;
+  avatar?: string;
+}) => {
+  return http.request<{ code: number; message: string }>("put", "/api/auth/me", {
+    data
+  });
+};
+
 /** 刷新token（后端暂未实现，占位） */
 export const refreshTokenApi = (data?: object) => {
   return http.request<UserResult>("post", "/api/auth/refresh-token", { data });

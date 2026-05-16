@@ -12,6 +12,8 @@ class PostCreate(BaseModel):
     tags: list[str] = []
     status: str = "draft"
     is_pinned: bool = False
+    reading_time: int = 0
+    word_count: int = 0
 
 
 class PostUpdate(BaseModel):
@@ -24,6 +26,8 @@ class PostUpdate(BaseModel):
     tags: list[str] | None = None
     status: str | None = None
     is_pinned: bool | None = None
+    reading_time: int | None = None
+    word_count: int | None = None
 
 
 class PostOut(BaseModel):

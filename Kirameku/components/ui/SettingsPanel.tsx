@@ -8,7 +8,7 @@ import { siteConfig } from "@/siteConfig";
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const { bgImage, bgBlur, setBgImage, setBgBlur } = useBackground();
-  const { clickEffect, mouseTrail, toggleClickEffect, toggleMouseTrail } = useEffects();
+  const { clickEffect, mouseTrail, seasonalEffect, sparkleEffect, toggleClickEffect, toggleMouseTrail, toggleSeasonalEffect, toggleSparkleEffect } = useEffects();
   const images = siteConfig.bgImages;
   const currentIndex = images.indexOf(bgImage);
   const [showGrid, setShowGrid] = useState(false);
@@ -174,6 +174,26 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             <span className="text-xs text-slate-700 dark:text-slate-300">鼠标轨迹</span>
             <div className={`w-9 h-5 rounded-full transition-colors ${mouseTrail ? "bg-sky-500" : "bg-slate-300 dark:bg-slate-600"}`}>
               <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform mt-0.5 ${mouseTrail ? "translate-x-4.5" : "translate-x-0.5"}`} />
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={toggleSeasonalEffect}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors"
+          >
+            <span className="text-xs text-slate-700 dark:text-slate-300">季节特效</span>
+            <div className={`w-9 h-5 rounded-full transition-colors ${seasonalEffect ? "bg-sky-500" : "bg-slate-300 dark:bg-slate-600"}`}>
+              <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform mt-0.5 ${seasonalEffect ? "translate-x-4.5" : "translate-x-0.5"}`} />
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={toggleSparkleEffect}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors"
+          >
+            <span className="text-xs text-slate-700 dark:text-slate-300">星星迸发</span>
+            <div className={`w-9 h-5 rounded-full transition-colors ${sparkleEffect ? "bg-sky-500" : "bg-slate-300 dark:bg-slate-600"}`}>
+              <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform mt-0.5 ${sparkleEffect ? "translate-x-4.5" : "translate-x-0.5"}`} />
             </div>
           </button>
         </div>

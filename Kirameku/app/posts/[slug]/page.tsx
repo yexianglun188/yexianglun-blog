@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { marked } from "marked";
+import { X } from "lucide-react";
 
 marked.use({ async: false });
 import {
@@ -16,15 +17,22 @@ import {
   Heart,
   Loader2,
 } from "lucide-react";
-import { getPostBySlug, type PostDetail } from "@/app/api";
+import { getPostBySlug, likePost, type PostDetail } from "@/app/api";
 import ReadingProgress from "@/components/ui/ReadingProgress";
+import PostComments from "@/components/posts/PostComments";
 
 export default function PostDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<PostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [likedPosts, setLikedPosts] = useState<Set<number>>(() => {
+    if (typeof window === "undefined") return new Set();
+    const saved = localStorage.getItem("liked_posts");
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
   const contentRef = useRef<HTMLDivElement>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -44,6 +52,30 @@ export default function PostDetailPage() {
       });
     return () => { active = false; };
   }, [slug]);
+
+  async function handleLike() {
+    if (!post) return;
+    const alreadyLiked = likedPosts.has(post.id);
+    try {
+      const result = await likePost(post.id, alreadyLiked);
+      setLikedPosts((prev) => {
+        const next = new Set(prev);
+        if (alreadyLiked) next.delete(post.id);
+        else next.add(post.id);
+        localStorage.setItem("liked_posts", JSON.stringify([...next]));
+        return next;
+      });
+      setPost((prev) => prev ? { ...prev, likes: result.likes } : prev);
+    } catch {}
+  }
+
+  // 事件委托：点击文章内容中的图片打开灯箱
+  function handleContentClick(e: React.MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (target.tagName === "IMG") {
+      setLightboxSrc((target as HTMLImageElement).src);
+    }
+  }
 
   if (loading) {
     return (
@@ -72,12 +104,12 @@ export default function PostDetailPage() {
 
   const dateStr = post.published_at
     ? new Date(post.published_at).toLocaleDateString("zh-CN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : "";
 
   return (
@@ -148,10 +180,20 @@ export default function PostDetailPage() {
               <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {post.views} 次浏览
             </span>
-            <span className="flex items-center gap-1 sm:gap-1.5">
-              <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <button
+              type="button"
+              onClick={handleLike}
+              className={`flex items-center gap-1 sm:gap-1.5 transition-colors ${
+                likedPosts.has(post.id)
+                  ? "text-pink-500"
+                  : "text-slate-500 dark:text-slate-400 hover:text-pink-500"
+              }`}
+            >
+              <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-all duration-300 ${
+                likedPosts.has(post.id) ? "fill-pink-500 scale-110" : ""
+              }`} />
               {post.likes} 个点赞
-            </span>
+            </button>
           </div>
 
           {/* 文章内容 */}
@@ -179,12 +221,20 @@ export default function PostDetailPage() {
                 overflow-x: auto !important;
                 margin: 1.5rem 0 !important;
                 border: 1px solid rgba(255,255,255,0.08) !important;
+                font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace !important;
+                line-height: 1.6 !important;
+                white-space: pre !important;
+                word-break: normal !important;
+                overflow-wrap: normal !important;
               }
               .post-content pre code {
                 background-color: transparent !important;
                 padding: 0 !important;
                 color: inherit !important;
                 font-size: 0.9em !important;
+                white-space: pre !important;
+                word-break: normal !important;
+                font-family: inherit !important;
               }
               .post-content code::before, .post-content code::after { content: none !important; }
               .post-content p code, .post-content li code {
@@ -215,6 +265,7 @@ export default function PostDetailPage() {
                 border-radius: 1rem !important;
                 max-width: 100% !important;
                 height: auto !important;
+                cursor: zoom-in !important;
               }
               .post-content a {
                 color: #6366f1 !important;
@@ -240,14 +291,20 @@ export default function PostDetailPage() {
                 width: 100% !important;
                 border-collapse: collapse !important;
                 margin: 1.5rem 0 !important;
+                border: 2px solid #cbd5e1 !important;
+                border-radius: 0.5rem !important;
+                overflow: hidden !important;
               }
               .post-content th, .post-content td {
-                border: 1px solid #e2e8f0 !important;
-                padding: 0.5rem 0.75rem !important;
+                border: 1px solid #cbd5e1 !important;
+                padding: 0.6rem 1rem !important;
                 text-align: left !important;
               }
+              .dark .post-content table {
+                border-color: #475569 !important;
+              }
               .dark .post-content th, .dark .post-content td {
-                border-color: #334155 !important;
+                border-color: #475569 !important;
               }
               .post-content th {
                 background-color: #f1f5f9 !important;
@@ -259,11 +316,38 @@ export default function PostDetailPage() {
             `}</style>
             <div
               className="post-content prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 leading-relaxed"
+              onClick={handleContentClick}
               dangerouslySetInnerHTML={{ __html: marked.parse(post.content) as string }}
             />
           </div>
         </div>
       </motion.article>
+
+      {/* 评论区域 */}
+      <PostComments postId={post.id} />
+
+      {/* 图片灯箱 */}
+      <div
+        className={`fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-200 ${lightboxSrc ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setLightboxSrc(null)}
+      >
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
+        <button
+          type="button"
+          onClick={() => setLightboxSrc(null)}
+          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+        >
+          <X className="w-6 h-6" />
+        </button>
+        {lightboxSrc && (
+          <img
+            src={lightboxSrc}
+            alt=""
+            className="relative z-10 max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -32,8 +32,8 @@ import {
   likeMessage,
   getGithubUser,
   type MessageItem,
-  type GitHubUser,
 } from "@/app/api/messages";
+import type { GitHubUser } from "@/app/api/types";
 
 // 递归展平嵌套回复，附带"回复谁"信息
 function flattenReplies(
@@ -60,13 +60,14 @@ function relativeTime(dateStr: string): string {
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
+  if (days >= 3) {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
   if (minutes < 1) return "刚刚";
   if (minutes < 60) return `${minutes}分钟前`;
   if (hours < 24) return `${hours}小时前`;
-  if (days < 30) return `${days}天前`;
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  return `${m}月${day}日`;
+  return `${days}天前`;
 }
 
 export default function MessagesPage() {
