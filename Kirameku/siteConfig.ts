@@ -3,7 +3,7 @@
 export const siteConfig = {
   // 网站标题与博主信息
   title: "Starhiroの小站",
-  url: "https://hiromu.top",
+  url: "https://boke.hiromu.top",
   authorName: "Starhiro",
   bio: "在代码与学术间穿梭的普通人",
 

@@ -7,6 +7,8 @@ export const revalidate = 3600;
 
 const BACKEND_URL = "http://127.0.0.1:8000";
 
+const FEED_AUTHOR = `guh982719@gmail.com (${siteConfig.authorName})`;
+
 interface PostDetail extends PostItem {
   content: string;
 }
@@ -96,7 +98,7 @@ async function generateItem(
       <description><![CDATA[${post.description || ""}]]></description>
       <content:encoded><![CDATA[${contentHtml}]]></content:encoded>
       <pubDate>${pubDate}</pubDate>
-      <author>${escapeXml(siteConfig.authorName)}</author>${categories ? `\n${categories}` : ""}
+      <author>${escapeXml(FEED_AUTHOR)}</author>${categories ? `\n${categories}` : ""}
     </item>`;
 }
 
