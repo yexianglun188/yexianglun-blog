@@ -7,7 +7,13 @@ export type VisitorItem = {
   city: string;
   region: string;
   country: string;
+  district: string;
   org: string;
+  org_cn: string;
+  asn: string;
+  is_mobile: boolean;
+  is_proxy: boolean;
+  is_hosting: boolean;
   browser: string;
   os: string;
   device_type: string;

@@ -19,9 +19,11 @@ const pagination = reactive<PaginationProps>({
 
 const columns: TableColumnList = [
   { label: "ID", prop: "id", width: 60 },
-  { label: "IP", prop: "ip", width: 140 },
-  { label: "位置", prop: "location", minWidth: 160, slot: "location" },
-  { label: "运营商", prop: "org", minWidth: 120 },
+  { label: "IP", prop: "ip", width: 80, slot: "ip" },
+  { label: "位置", prop: "location", width: 180, slot: "location" },
+  { label: "运营商", prop: "org", minWidth: 120, slot: "org" },
+  { label: "ASN", prop: "asn", width: 120, slot: "asn" },
+  { label: "网络", prop: "network", width: 80, slot: "network" },
   { label: "浏览器", prop: "browser", width: 90 },
   { label: "系统", prop: "os", width: 90 },
   { label: "设备", prop: "device_type", width: 70 },
@@ -117,13 +119,46 @@ onMounted(() => onSearch());
         @page-size-change="handleSizeChange"
         @page-current-change="handleCurrentChange"
       >
+        <template #ip="{ row }">
+          <span :title="row.ip" class="ip-cell">{{ row.ip }}</span>
+        </template>
+
         <template #location="{ row }">
           <span class="text-sm">
             {{
-              [row.city, row.region, row.country].filter(Boolean).join(", ") ||
+              [row.country, row.region, row.city, row.district].filter(Boolean).join(" · ") ||
               "未知"
             }}
           </span>
+        </template>
+
+        <template #asn="{ row }">
+          <el-tooltip placement="top">
+            <template #content>
+              <div class="text-xs">{{ row.asn }}</div>
+              <div v-if="row.org_cn" class="text-xs mt-1">{{ row.org_cn }}</div>
+            </template>
+            <span class="asn-cell">{{ row.asn }}</span>
+          </el-tooltip>
+        </template>
+
+        <template #org="{ row }">
+          <el-tooltip placement="top">
+            <template #content>
+              <div class="text-xs">{{ row.org }}</div>
+              <div v-if="row.org_cn" class="text-xs mt-1">{{ row.org_cn }}</div>
+            </template>
+            <span>{{ row.org }}</span>
+          </el-tooltip>
+        </template>
+
+        <template #network="{ row }">
+          <div class="flex gap-1 justify-center">
+            <el-tag v-if="row.is_hosting" size="small" type="warning">机房</el-tag>
+            <el-tag v-else-if="row.is_mobile" size="small" type="success">移动</el-tag>
+            <el-tag v-else size="small">宽带</el-tag>
+            <el-tag v-if="row.is_proxy" size="small" type="danger">代理</el-tag>
+          </div>
         </template>
 
         <template #operation="{ row }">
@@ -140,3 +175,23 @@ onMounted(() => onSearch());
     </el-card>
   </div>
 </template>
+
+<style scoped>
+.ip-cell {
+  display: inline-block;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.asn-cell {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+</style>

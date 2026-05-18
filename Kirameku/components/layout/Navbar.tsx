@@ -31,7 +31,7 @@ const navLinks = [
   { href: "/", label: "首页", icon: Home },
   { href: "/posts", label: "文章", icon: BookOpen },
   { href: "/moments", label: "说说", icon: MessageSquare },
-  { href: "/messages", label: "杂谈", icon: Newspaper },
+  { href: "/messages", label: "留言", icon: Newspaper },
   { href: "/novel", label: "小说", icon: Library },
   { href: "/bookmark", label: "收藏夹", icon: Bookmark },
   { href: "/projects", label: "项目", icon: FolderGit2 },

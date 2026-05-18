@@ -5,7 +5,7 @@ export const siteConfig = {
   title: "Starhiroの小站",
   url: "https://boke.hiromu.top",
   authorName: "Starhiro",
-  bio: "在代码与学术间穿梭的普通人",
+  bio: "项目开源在 GitHub,点击下面的GitHub图标跳转,欢迎 star 和 fork！(◕‿◕)",
 
   // 头像设置
   avatarUrl: "/images/hong.jpg",
@@ -38,7 +38,7 @@ export const siteConfig = {
 
   // 社交链接
   social: {
-    github: "https://github.com/Xinghongia",
+    github: "https://github.com/Xinghongia/Kirameku",
     gitee: "https://gitee.com/hongzyh",
     google: "mailto:guh982719@gmail.com",
     email: "your.email@example.com",
@@ -63,6 +63,6 @@ export const siteConfig = {
   },
 
   // 分类标题
-  chatterTitle: "杂谈",
+  chatterTitle: "留言",
   chatterDescription: "生活、技术、随想的碎片记录",
 };

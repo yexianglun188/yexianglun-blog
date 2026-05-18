@@ -266,7 +266,7 @@ export default function MessagesPage() {
         <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
           <Newspaper className="w-5 h-5 md:w-7 md:h-7 text-sky-500" />
           <h1 className="text-xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
-            杂谈
+            留言
           </h1>
         </div>
         <p className="text-sm md:text-base text-slate-600 dark:text-slate-300 ml-7 md:ml-10">
@@ -394,7 +394,7 @@ export default function MessagesPage() {
             />
             <div className="flex items-center justify-between mt-2 pt-2 md:mt-3 md:pt-3 border-t border-slate-200/50 dark:border-white/5">
               <span className="text-[10px] md:text-xs text-slate-400">
-                {user ? "Ctrl + Enter 发送" : ""}
+                {"Ctrl + Enter 发送"}
               </span>
               <button
                 type="button"
@@ -438,7 +438,6 @@ export default function MessagesPage() {
               onLike={handleLike}
               onReply={startReply}
               onToggleReplies={toggleReplies}
-              user={user}
             />
           </motion.div>
         ))}
@@ -454,7 +453,6 @@ function MessageCard({
   onLike,
   onReply,
   onToggleReplies,
-  user,
 }: {
   msg: MessageItem;
   likedIds: Set<number>;
@@ -462,7 +460,6 @@ function MessageCard({
   onLike: (id: number) => void;
   onReply: (msg: MessageItem) => void;
   onToggleReplies: (id: number) => void;
-  user: GitHubUser | null;
 }) {
   const isExpanded = expandedReplies.has(msg.id);
   const flatReplies = flattenReplies(msg.replies ?? []);
@@ -571,7 +568,6 @@ function MessageCard({
                   likedIds={likedIds}
                   onLike={onLike}
                   onReply={onReply}
-                  user={user}
                 />
               ))}
             </div>
@@ -587,13 +583,11 @@ function ReplyCard({
   likedIds,
   onLike,
   onReply,
-  user,
 }: {
   reply: MessageItem & { replyToUser?: string };
   likedIds: Set<number>;
   onLike: (id: number) => void;
   onReply: (msg: MessageItem) => void;
-  user: GitHubUser | null;
 }) {
   return (
     <div className="px-3 py-2 md:px-5 md:py-3 border-b border-slate-200/30 dark:border-white/5 last:border-0">
@@ -645,16 +639,14 @@ function ReplyCard({
               />
               <span>{reply.likes}</span>
             </button>
-            {user && (
-              <button
-                type="button"
-                onClick={() => onReply(reply)}
-                className="flex items-center gap-0.5 md:gap-1 text-[10px] md:text-xs text-slate-400 hover:text-sky-500 transition-colors"
-              >
-                <Reply className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                <span>回复</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => onReply(reply)}
+              className="flex items-center gap-0.5 md:gap-1 text-[10px] md:text-xs text-slate-400 hover:text-sky-500 transition-colors"
+            >
+              <Reply className="w-3 h-3 md:w-3.5 md:h-3.5" />
+              <span>回复</span>
+            </button>
           </div>
         </div>
       </div>

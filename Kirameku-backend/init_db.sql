@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS comment (
     parent_id       INTEGER      REFERENCES comment(id) ON DELETE CASCADE,
     github_user_id  INTEGER      REFERENCES github_user(id) ON DELETE SET NULL,
     content         TEXT         NOT NULL,
+    likes           INTEGER      DEFAULT 0,
     ip              VARCHAR(45)  DEFAULT '',
     status          VARCHAR(20)  DEFAULT 'approved',
     created_at      TIMESTAMP    DEFAULT NOW()
@@ -153,6 +154,7 @@ CREATE TABLE IF NOT EXISTS chatter_comment (
     github_user_id  INTEGER      REFERENCES github_user(id) ON DELETE SET NULL,
     content         TEXT         NOT NULL,
     ip              VARCHAR(45)  DEFAULT '',
+    likes           INTEGER      DEFAULT 0,
     status          VARCHAR(20)  DEFAULT 'approved',
     created_at      TIMESTAMP    DEFAULT NOW()
 );
@@ -281,7 +283,12 @@ CREATE TABLE IF NOT EXISTS visitor (
     city          VARCHAR(100) DEFAULT '',
     region        VARCHAR(100) DEFAULT '',
     country       VARCHAR(100) DEFAULT '',
+    district      VARCHAR(100) DEFAULT '',
     org           VARCHAR(200) DEFAULT '',
+    asn           VARCHAR(50)  DEFAULT '',
+    is_mobile     BOOLEAN      DEFAULT FALSE,
+    is_proxy      BOOLEAN      DEFAULT FALSE,
+    is_hosting    BOOLEAN      DEFAULT FALSE,
     browser       VARCHAR(50)  DEFAULT '',
     os            VARCHAR(50)  DEFAULT '',
     device_type   VARCHAR(20)  DEFAULT '',

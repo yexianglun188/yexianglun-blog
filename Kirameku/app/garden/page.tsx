@@ -166,7 +166,7 @@ export default function GardenPage() {
       setCategoryData([
         { name: "文章", value: posts.count, color: colors[0] },
         { name: "说说", value: chatters.count, color: colors[1] },
-        { name: "杂谈", value: countReplies(messages), color: colors[2] },
+        { name: "留言", value: countReplies(messages), color: colors[2] },
         { name: "照片", value: photoCount, color: colors[3] },
       ]);
     }).catch(() => {});
@@ -266,7 +266,7 @@ export default function GardenPage() {
                 </Pie>
                 <Tooltip
                   formatter={(value, name) => {
-                    const units: Record<string, string> = { 文章: "篇", 说说: "条", 杂谈: "条", 照片: "张" };
+                    const units: Record<string, string> = { 文章: "篇", 说说: "条", 留言: "条", 照片: "张" };
                     return [`${value} ${units[name as string] ?? ""}`, name];
                   }}
                   contentStyle={{
