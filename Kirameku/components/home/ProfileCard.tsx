@@ -1,30 +1,14 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { getPostsCount, getAlbums, getChattersCount } from "@/app/api";
 import { siteConfig } from "@/siteConfig";
 
-export default function ProfileCard() {
-  const [postCount, setPostCount] = useState(0);
-  const [chatterCount, setChatterCount] = useState(0);
-  const [photoCount, setPhotoCount] = useState(0);
-
-  useEffect(() => {
-    getPostsCount("published")
-      .then((data) => setPostCount(data.count ?? 0))
-      .catch(() => {});
-
-    getChattersCount("published")
-      .then((data) => setChatterCount(data.count ?? 0))
-      .catch(() => {});
-
-    getAlbums()
-      .then((albums) => {
-        setPhotoCount(albums.reduce((acc, a) => acc + (a.photo_count ?? 0), 0));
-      })
-      .catch(() => {});
-  }, []);
-
+export default function ProfileCard({
+  postCount = 0,
+  chatterCount = 0,
+  photoCount = 0,
+}: {
+  postCount?: number;
+  chatterCount?: number;
+  photoCount?: number;
+}) {
   return (
     <div
       className="rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl p-5 md:p-8 flex flex-col justify-between transition-all duration-700 group relative overflow-hidden w-full h-full min-h-[200px] md:min-h-[280px]"
