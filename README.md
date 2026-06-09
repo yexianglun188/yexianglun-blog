@@ -19,6 +19,18 @@
 
 ---
 
+## 效果展示
+
+<div align="center">
+  <img src="docs/images/首页.png" width="90%" />
+  <img src="docs/images/文章.png" width="90%" />
+  <img src="docs/images/说说.png" width="90%" />
+  <img src="docs/images/照片墙.png" width="90%" />
+  <img src="docs/images/归档.png" width="90%" />
+</div>
+
+---
+
 ## 项目结构
 
 ```
