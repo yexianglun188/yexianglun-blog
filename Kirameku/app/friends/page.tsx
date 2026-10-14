@@ -200,10 +200,15 @@ export default function FriendsPage() {
               <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4 md:mb-6">
                 {active.description || "这个朋友很懒，没有留下描述~"}
               </p>
+              {/* 先过本站确认页：手机 / 微信内置浏览器会忽略 target="_blank"，
+                  直接跳会把本站顶掉，用户就回不来了 */}
               <a
-                href={active.url}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/go?${new URLSearchParams({
+                  url: active.url,
+                  name: active.name,
+                  icon: active.avatar || "",
+                  from: "/friends",
+                }).toString()}`}
                 className="inline-flex items-center gap-1.5 md:gap-2 px-4 py-2 md:px-6 md:py-2.5 rounded-full bg-sky-500 text-white text-xs md:text-sm font-medium hover:bg-sky-600 transition-colors shadow-lg shadow-sky-500/20"
               >
                 <ExternalLink className="w-3.5 h-3.5 md:w-4 md:h-4" />

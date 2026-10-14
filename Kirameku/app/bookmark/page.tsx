@@ -82,11 +82,18 @@ export default function BookmarkPage() {
               {/* Site Cards */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "10px" }}>
                 {category.sites.map((site, siteIndex) => (
+                  /* 不再直接 href 外站：手机浏览器 / 微信内置 WebView 常忽略
+                     target="_blank"，当前页会被顶掉，用户就回不来了。
+                     改为先落到本站的确认页，由确认页再开新标签前往。
+                     想快速直达可以 Ctrl / ⌘ + 点击（浏览器会新标签打开确认页）。 */
                   <motion.a
                     key={site.id}
-                    href={site.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={`/go?${new URLSearchParams({
+                      url: site.url,
+                      name: site.name,
+                      icon: getIcon(site),
+                      from: "/bookmark",
+                    }).toString()}`}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{
