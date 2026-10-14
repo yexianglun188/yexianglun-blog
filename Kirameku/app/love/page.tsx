@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fallingPetals, floatingToast } from "@/lib/easterEggs";
 import FadeIn from "@/components/ui/FadeIn";
+import { siteConfig } from "@/siteConfig";
 
 /**
- * 彩蛋：藏宝式情书页 /love
- * 需要先在搜索框输入摩斯密码 "-.- .. .-. .- -- . -.- ..-"（KIRAMEKU）解锁，
- * 未解锁访问时显示「这里什么都没有」，解锁后逐字浮现一封信。
+ * 彩蛋：藏在摩斯密码后面的信 /love
+ *
+ * 先在首页搜索框输入 "-.- .. .-. .- -- . -.- ..-"（KIRAMEKU）解锁，
+ * 未解锁访问时只显示一句「这里什么都没有」式的提示，解锁后逐行浮现一封信。
+ *
+ * 文案全部来自 siteConfig.loveLetter，改内容不用动这个文件。
  */
 export default function LovePage() {
   const [unlocked, setUnlocked] = useState(false);
@@ -19,16 +23,10 @@ export default function LovePage() {
     setUnlocked(localStorage.getItem("love-unlock") === "true");
   }, []);
 
-  const lines = [
-    "致此刻看到这封信的你：",
-    "谢谢你愿意为一个藏在代码里的谜题，",
-    "耐心地走到这里。",
-    "这个网站叫 Kirameku —— 日语「煌めく」，",
-    "意思是「闪耀、熠熠生辉」。",
-    "愿你我的每一天，都能像这名字一样，",
-    "在平凡里，发一点光。",
-    "—— 一个还在努力长大的开发者",
-  ];
+  const letter = siteConfig.loveLetter;
+  const lines = letter.lines;
+  // 逐行浮现的间隔：行多时自动压缩，保证整封信 4 秒左右浮完
+  const lineDelay = Math.min(0.5, 4 / Math.max(lines.length, 1));
 
   useEffect(() => {
     if (unlocked && mounted) {
@@ -51,10 +49,10 @@ export default function LovePage() {
           >
             <div className="text-6xl mb-6">🔒</div>
             <p className="text-slate-500 dark:text-slate-400 text-lg">
-              这里什么都没有，也许你还没有找到那把钥匙。
+              {letter.lockedText}
             </p>
             <p className="text-slate-400 dark:text-slate-500 text-sm mt-3">
-              提示：答案就藏在我关于页的最后一行。
+              {letter.lockedTip}
             </p>
           </motion.div>
         ) : (
@@ -67,7 +65,7 @@ export default function LovePage() {
             <div className="text-center mb-8">
               <div className="text-5xl mb-4">💌</div>
               <h1 className="text-2xl md:text-3xl font-black text-rose-500 dark:text-rose-400">
-                你找到了这封信
+                {letter.title}
               </h1>
             </div>
             <div className="space-y-4 text-center">
@@ -76,7 +74,7 @@ export default function LovePage() {
                   key={i}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.5 }}
+                  transition={{ delay: i * lineDelay }}
                   className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg"
                 >
                   {line}
@@ -85,10 +83,10 @@ export default function LovePage() {
             </div>
             <div className="text-center mt-10">
               <button
-                onClick={() => floatingToast("这封信，会一直在这里等你 💫", { emoji: "💫", duration: 3000 })}
+                onClick={() => floatingToast(letter.buttonToast, { emoji: "💫", duration: 3000 })}
                 className="px-6 py-2.5 rounded-full bg-rose-500/10 text-rose-500 dark:text-rose-400 hover:bg-rose-500/20 transition-colors text-sm font-medium"
               >
-                回赠一颗星 ✨
+                {letter.button}
               </button>
             </div>
           </motion.div>

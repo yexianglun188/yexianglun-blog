@@ -32,7 +32,7 @@ const DEFAULT_MD = `# 📝 在线 Markdown 编辑器
 function hello(name) {
   console.log(\`Hello, \${name}!\`);
 }
-hello("Kirameku");
+hello("yexianglun");
 \`\`\`
 
 行内代码 \`const x = 42\` 也可以。
