@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { confetti, fallingPetals, burstAt, floatingToast, playLoveEgg, playKiramekuEgg } from "@/lib/easterEggs";
+import { confetti, fallingPetals, burstAt, floatingToast, playLoveEgg, playKiramekuEgg, speakText } from "@/lib/easterEggs";
 import { siteConfig } from "@/siteConfig";
 
 /**
@@ -111,11 +111,17 @@ export default function EasterEggs() {
       setTimeout(() => {
         body.style.filter = "";
         fallingPetals({ count: 40, color: ["#a78bfa", "#818cf8", "#c4b5fd", "#e0e7ff"], duration: 4500 });
-        floatingToast("我找到了逆转时间的公式：把每一天都过成值得回看的样子 ✨", {
+        const egg = siteConfig.avatarEasterEgg;
+        floatingToast(`${egg.line} ✨`, {
           emoji: "💫",
           duration: 6000,
           style: "max-width:85vw;text-align:center",
         });
+        // 配音：浏览器内置语音合成，和台词同步念出来。
+        // 双击本身是用户手势，不会触发浏览器的自动播放限制。
+        if (egg.speak) {
+          speakText(egg.line, { rate: egg.rate, pitch: egg.pitch });
+        }
       }, 1600);
       setTimeout(() => { rewindLock = false; }, 2500); // 2.5s 后解锁
     };

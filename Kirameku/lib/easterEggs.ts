@@ -329,3 +329,60 @@ export function playKiramekuEgg() {
   });
   floatingToast("YEXIANGLUN —— 闪耀吧 ✨", { emoji: "🌟", duration: 3500 });
 }
+
+/* ── 浏览器语音合成（零依赖配音）──────────────────────────────
+ * 用 Web Speech API 朗读一段文字，不需要任何下载或后端服务。
+ * 音色由系统/浏览器提供（中文女声优先），**不是特定角色的音色** ——
+ * 想要指定角色的音色得走声音克隆，那是另一套离线流程。
+ */
+
+/** 去掉 emoji 和多余空白，避免念出奇怪的东西 */
+function stripForSpeech(text: string): string {
+  return text
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2600}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function speakText(
+  text: string,
+  opts: { rate?: number; pitch?: number; volume?: number } = {}
+) {
+  if (typeof window === "undefined") return;
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+
+  const plain = stripForSpeech(text);
+  if (!plain) return;
+
+  // 打断上一次朗读，避免双击多次时叠音
+  synth.cancel();
+
+  const utter = new SpeechSynthesisUtterance(plain);
+  utter.lang = "zh-CN";
+  // 默认语速稍慢、音调略高，听感更接近清冷柔和
+  utter.rate = opts.rate ?? 0.9;
+  utter.pitch = opts.pitch ?? 1.05;
+  utter.volume = opts.volume ?? 1;
+
+  const speakNow = () => {
+    const voices = synth.getVoices();
+    const zh = voices.filter((v) => /^zh/i.test(v.lang || ""));
+    // 优先挑中文女声（不同系统的命名不一样，尽量兜住）
+    const female =
+      zh.find((v) => /xiaoxiao|xiaoyi|huihui|yaoyao|female|女/i.test(v.name)) ||
+      zh[0];
+    if (female) utter.voice = female;
+    synth.speak(utter);
+  };
+
+  // 语音列表首次可能是空的，要等 voiceschanged
+  if (synth.getVoices().length === 0) {
+    synth.onvoiceschanged = () => {
+      synth.onvoiceschanged = null;
+      speakNow();
+    };
+  } else {
+    speakNow();
+  }
+}
