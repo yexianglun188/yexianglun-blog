@@ -130,6 +130,29 @@
 
 文章、分类、标签、评论、留言、说说、相册、项目、友链、收藏夹、站点配置 — 全部可视化管理，支持图片压缩上传至阿里云 OSS。
 
+## 素材说明（clone 后必读）
+
+仓库**不含**以下第三方素材 —— 它们受版权保护，不适合在公开仓库中分发。
+代码已做降级处理，**缺失不影响构建与运行**，只是对应功能静默失效。
+
+| 目录 | 内容 | 缺失后的表现 |
+|:-----|:-----|:-----|
+| `Kirameku/public/live2d/` | 第三方 Live2D 模型与语音（约 217MB） | 看板娘不显示 |
+| `Kirameku/public/images/` | 头像、首页照片墙、关于页/项目页封面 | 对应位置裂图，换成任意图片即可 |
+| `Kirameku/public/audio/` | 情书页 BGM、关于页配音 | BGM 静音；配音自动退回浏览器内置语音合成 |
+
+自备素材时**放回原路径、用同名文件**即可，无需改任何代码：
+
+| 用途 | 放置路径 | 相关配置 |
+|:-----|:-----|:-----|
+| 头像 | `public/images/hong.jpg` | `siteConfig.ts` → `avatarUrl` |
+| 首页照片墙 | `public/images/*.webp` | `siteConfig.ts` → 照片墙数组 |
+| 情书页 BGM | `public/audio/love-bgm.mp3` | `siteConfig.ts` → `loveLetter.bgm` |
+| 关于页配音 | `public/audio/avatar-line.mp3` | `siteConfig.ts` → `avatarEasterEgg.voiceClip`（留空则用浏览器 TTS） |
+| Live2D 模型 | `public/live2d/model/<名称>/` | 需在 `public/live2d/model_list.json` 中登记 |
+
+> 以上路径均已写入 `.gitignore`，本地素材不会被误提交。
+
 ## 快速开始
 
 ### 1. 后端
@@ -244,5 +267,11 @@ OSS_BUCKET=your-bucket-name
 ## License
 
 MIT
+
+本项目**代码**采用 MIT 协议，可自由使用与修改。
+
+需要说明的是：仓库**不包含**任何第三方受版权保护的素材（见上文「素材说明」）。
+如果你自行放入 Live2D 模型、音乐、配音、图片等第三方资源，请自行确认其授权状况 ——
+这类内容**不在** MIT 协议覆盖范围内，相关权利归各自权利人所有。
 
 
