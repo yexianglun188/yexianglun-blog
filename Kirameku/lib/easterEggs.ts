@@ -306,3 +306,26 @@ export function floatingToast(message: string, opts: { emoji?: string; duration?
     setTimeout(() => el.remove(), 400);
   }, duration);
 }
+
+/* ── 高层彩蛋触发器 ─────────────────────────────────────────────
+ * 抽成独立函数是因为触发入口有两个：
+ *   1) 桌面端：全局监听键盘输入（EasterEggs.tsx）
+ *   2) 移动端：没有物理键盘，只能靠首页搜索框输入（SearchBar.tsx）
+ * 两边共用同一套效果，避免各写一遍导致表现不一致。
+ */
+
+/** 彩蛋「键盘流星」：全屏流星雨 —— 输入 love */
+export function playLoveEgg() {
+  meteorShower({ count: 50, duration: 5000 });
+  floatingToast("你唤醒了这颗星球 🌍", { emoji: "💫", duration: 3500 });
+}
+
+/** 彩蛋「闪耀吧」：星星彩纸 —— 输入 kirameku */
+export function playKiramekuEgg() {
+  confetti({
+    count: 200,
+    shapes: [2],
+    colors: ["#a78bfa", "#67e8f9", "#f9a8d4", "#fde047"],
+  });
+  floatingToast("KIRAMEKU —— 闪耀吧 ✨", { emoji: "🌟", duration: 3500 });
+}

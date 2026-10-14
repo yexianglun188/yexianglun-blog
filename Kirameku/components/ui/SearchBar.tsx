@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { playLoveEgg, playKiramekuEgg } from "@/lib/easterEggs";
 
 export default function SearchBar() {
   const router = useRouter();
@@ -10,7 +11,24 @@ export default function SearchBar() {
   function handleSubmit() {
     const q = value.trim();
     if (!q) return;
-    // 保留原彩蛋：输入暗号解锁子站
+    const lower = q.toLowerCase();
+
+    // ── 彩蛋：移动端没有物理键盘，敲不出「键盘流星 / 闪耀吧」，
+    //    所以在搜索框里补一个入口，输入同样的暗号即可触发。
+    if (lower === "love") {
+      playLoveEgg();
+      setValue("");
+      return;
+    }
+    if (lower === "kirameku") {
+      playKiramekuEgg();
+      // 顺带解锁情书页（但不自动跳走，免得把刚触发的动画打断）
+      localStorage.setItem("love-unlock", "true");
+      setValue("");
+      return;
+    }
+
+    // 彩蛋：输入暗号解锁子站
     if (q === "5201314") {
       localStorage.setItem("garden-unlock", "true");
       router.push("/garden");
@@ -18,7 +36,7 @@ export default function SearchBar() {
       return;
     }
     // 彩蛋：摩斯密码 "-.- .. .-. .- -- . -.- ..-" = KIRAMEKU，解锁情书
-    if (q === "-.- .. .-. .- -- . -.- ..-" || q.toLowerCase() === "kirameku") {
+    if (q === "-.- .. .-. .- -- . -.- ..-") {
       localStorage.setItem("love-unlock", "true");
       router.push("/love");
       setValue("");
@@ -41,7 +59,7 @@ export default function SearchBar() {
         <input
           type="text"
           className="w-full pl-12 md:pl-14 pr-5 md:pr-6 py-3 md:py-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl md:rounded-3xl shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 dark:text-slate-200 transition-all placeholder-slate-500 dark:placeholder-slate-400 font-medium text-base md:text-lg"
-          placeholder="搜索文章，或输入暗号探索更多..."
+          placeholder="搜索文章，或输入暗号发现彩蛋..."
           value={value}
           onChange={(e) => setValue(e.target.value)}
           autoComplete="off"

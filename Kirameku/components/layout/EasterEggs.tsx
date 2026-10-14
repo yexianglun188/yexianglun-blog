@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { confetti, meteorShower, fallingPetals, burstAt, floatingToast } from "@/lib/easterEggs";
+import { confetti, fallingPetals, burstAt, floatingToast, playLoveEgg, playKiramekuEgg } from "@/lib/easterEggs";
 import { siteConfig } from "@/siteConfig";
 
 /**
@@ -38,7 +38,8 @@ export default function EasterEggs() {
   const logoClickTimes = useRef<number[]>([]);
   const live2dClickTimes = useRef<number[]>([]);
 
-  // ── 彩蛋 6：键盘 love 触发流星 ──
+  // ── 彩蛋 6：键盘 love / kirameku 触发 ──
+  // 移动端没有物理键盘，同样的效果也可以从首页搜索框输入触发（见 SearchBar）。
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // 忽略输入框内的输入
@@ -48,13 +49,11 @@ export default function EasterEggs() {
       if (typed.current.length > 20) typed.current = typed.current.slice(-20);
       if (typed.current.endsWith("love")) {
         typed.current = "";
-        meteorShower({ count: 50, duration: 5000 });
-        floatingToast("你唤醒了这颗星球 🌍", { emoji: "💫", duration: 3500 });
+        playLoveEgg();
       }
       if (typed.current.endsWith("kirameku")) {
         typed.current = "";
-        confetti({ count: 200, shapes: [2], colors: ["#a78bfa", "#67e8f9", "#f9a8d4", "#fde047"] });
-        floatingToast("KIRAMEKU —— 闪耀吧 ✨", { emoji: "🌟", duration: 3500 });
+        playKiramekuEgg();
       }
     };
     window.addEventListener("keydown", onKey);
