@@ -20,7 +20,7 @@ export default function SearchBar() {
       setValue("");
       return;
     }
-    if (lower === "kirameku") {
+    if (lower === "yexianglun") {
       playKiramekuEgg();
       // 顺带解锁情书页（但不自动跳走，免得把刚触发的动画打断）
       localStorage.setItem("love-unlock", "true");
@@ -35,8 +35,8 @@ export default function SearchBar() {
       setValue("");
       return;
     }
-    // 彩蛋：摩斯密码 "-.- .. .-. .- -- . -.- ..-" = KIRAMEKU，解锁情书
-    if (q === "-.- .. .-. .- -- . -.- ..-") {
+    // 彩蛋：摩斯密码 "-.-- . -..- .. .- -. --. .-.. ..- -." = YEXIANGLUN，解锁情书
+    if (q === "-.-- . -..- .. .- -. --. .-.. ..- -.") {
       localStorage.setItem("love-unlock", "true");
       router.push("/love");
       setValue("");

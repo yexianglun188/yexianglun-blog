@@ -1,4 +1,4 @@
--- Kirameku Blog - PostgreSQL 建表脚本
+-- yexianglun 博客 - PostgreSQL 建表脚本
 -- 执行方式: psql -U postgres -d kirameku -f init_db.sql
 
 -- ============================================
@@ -314,8 +314,8 @@ VALUES (
 -- 插入默认站点配置
 -- ============================================
 INSERT INTO site_config (key, value, description) VALUES
-    ('site_title',      '"Kirameku"',           '站点标题'),
-    ('site_description', '"煌めく — 一个个人博客"', '站点描述'),
+    ('site_title',      '"yexianglun"',       '站点标题'),
+    ('site_description', '"yexianglun — 一个个人博客"', '站点描述'),
     ('icp_number',      '""',                    'ICP备案号'),
     ('icp_link',        '""',                    'ICP备案链接')
 ON CONFLICT (key) DO NOTHING;

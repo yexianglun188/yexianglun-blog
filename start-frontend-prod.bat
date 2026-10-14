@@ -2,10 +2,10 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-title Kirameku Frontend (Production)
+title yexianglun Frontend (Production)
 
 echo ============================================
-echo    Kirameku Frontend - Production Mode
+echo    yexianglun Frontend - Production Mode
 echo    (build + start, for cpolar tunnel / demo)
 echo ============================================
 echo.

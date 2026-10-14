@@ -2,10 +2,10 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-title Kirameku - Start All
+title yexianglun - Start All
 
 echo ============================================
-echo    Kirameku - Start All Services
+echo    yexianglun - Start All Services
 echo ============================================
 echo    Opens two windows: backend ^(8000^) + frontend ^(3000^)
 echo.
@@ -34,12 +34,12 @@ echo        Done.
 echo.
 echo [2/3] Opening backend window ...
 cd /d "%BACKEND%"
-start "Kirameku-Backend" "%PY%" -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+start "yexianglun-Backend" "%PY%" -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 timeout /t 4 /nobreak >nul
 
 echo [3/3] Opening frontend window ...
 cd /d "%FRONTEND%"
-start "Kirameku-Frontend" cmd /k "npm run dev"
+start "yexianglun-Frontend" cmd /k "npm run dev"
 
 echo.
 echo ============================================

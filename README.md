@@ -1,8 +1,8 @@
 <div align="center">
 
-# Kirameku
+# yexianglun
 
-**きらめく — 像星光一样闪烁**
+**叶湘伦 —— 取自《不能说的秘密》里，那个弹钢琴的男生**
 
 一个从零搭建的全栈个人博客系统，前端 Next.js，后端 FastAPI，附带 Vue 管理后台。
 

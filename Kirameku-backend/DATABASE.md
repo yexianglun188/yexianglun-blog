@@ -1,4 +1,4 @@
-# Kirameku 数据库设计文档
+# yexianglun 数据库设计文档
 
 > 数据库：PostgreSQL 14+
 > 建表脚本：`init_db.sql`

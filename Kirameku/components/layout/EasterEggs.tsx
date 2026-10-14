@@ -38,7 +38,7 @@ export default function EasterEggs() {
   const logoClickTimes = useRef<number[]>([]);
   const live2dClickTimes = useRef<number[]>([]);
 
-  // ── 彩蛋 6：键盘 love / kirameku 触发 ──
+  // ── 彩蛋 6：键盘 love / yexianglun 触发 ──
   // 移动端没有物理键盘，同样的效果也可以从首页搜索框输入触发（见 SearchBar）。
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -46,12 +46,12 @@ export default function EasterEggs() {
       const t = e.target as HTMLElement;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       typed.current += e.key.toLowerCase();
-      if (typed.current.length > 20) typed.current = typed.current.slice(-20);
+      if (typed.current.length > 24) typed.current = typed.current.slice(-24);
       if (typed.current.endsWith("love")) {
         typed.current = "";
         playLoveEgg();
       }
-      if (typed.current.endsWith("kirameku")) {
+      if (typed.current.endsWith("yexianglun")) {
         typed.current = "";
         playKiramekuEgg();
       }

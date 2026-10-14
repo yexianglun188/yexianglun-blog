@@ -2,10 +2,10 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-title Kirameku Frontend
+title yexianglun Frontend
 
 echo ============================================
-echo    Kirameku Frontend  (Next.js)
+echo    yexianglun Frontend  (Next.js)
 echo ============================================
 echo.
 

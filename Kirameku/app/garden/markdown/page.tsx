@@ -56,7 +56,7 @@ hello("yexianglun");
 
 ### 链接与图片
 
-[Kirameku 博客](https://example.com)
+[yexianglun 博客](https://example.com)
 
 ### 数学公式（行内）
 

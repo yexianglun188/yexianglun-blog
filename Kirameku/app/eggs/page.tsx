@@ -24,8 +24,8 @@ const EGGS: Egg[] = [
   { id: "time", emoji: "⏳", name: "时间倒流", desc: "页面倒流 + 紫色花瓣雨", trigger: "关于页头像双击", where: "关于页" },
   { id: "confetti", emoji: "🎉", name: "Logo 彩纸", desc: "全屏彩纸 + 彩虹字", trigger: "2 秒内连点导航栏 Logo 7 次", where: "任意页" },
   { id: "love", emoji: "🌠", name: "键盘流星", desc: "全屏流星雨", trigger: "键盘打出 love，或首页搜索框输入 love", where: "任意页 / 首页" },
-  { id: "kirameku", emoji: "🌟", name: "闪耀吧", desc: "星星彩纸", trigger: "键盘打出 kirameku，或首页搜索框输入 kirameku", where: "任意页 / 首页" },
-  { id: "letter", emoji: "💌", name: "藏宝情书", desc: "一封给有缘人的信", trigger: "搜索框输入摩斯密码 -.- .. .-. .- -- . -.- ..-", where: "首页" },
+  { id: "kirameku", emoji: "🌟", name: "闪耀吧", desc: "星星彩纸", trigger: "键盘打出 yexianglun，或首页搜索框输入 yexianglun", where: "任意页 / 首页" },
+  { id: "letter", emoji: "💌", name: "藏宝情书", desc: "一封给有缘人的信", trigger: "搜索框输入摩斯密码 -.-- . -..- .. .- -. --. .-.. ..- -.", where: "首页" },
   { id: "night", emoji: "🌙", name: "凌晨问候", desc: "深夜访问的温柔问候", trigger: "凌晨 0~5 点访问", where: "自动触发" },
   { id: "waifu", emoji: "💬", name: "看板娘密语", desc: "随机情话", trigger: "连点看板娘 3 次", where: "任意页" },
 ];

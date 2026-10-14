@@ -1,7 +1,7 @@
 ---
 title: Nginx 反向代理实战：一个域名跑多个服务
 slug: nginx-reverse-proxy
-description: 以 Kirameku 博客的真实配置为例，详解 Nginx 反向代理、location 匹配规则、WebSocket 支持和缓存控制，以及部署中踩过的坑
+description: 以 yexianglun 博客的真实配置为例，详解 Nginx 反向代理、location 匹配规则、WebSocket 支持和缓存控制，以及部署中踩过的坑
 date: 2026-05-18
 ---
 
@@ -9,22 +9,22 @@ date: 2026-05-18
 
 当你开始把个人项目往服务器上部署时，很快就会遇到一个问题：**只有一个服务器，却有多个服务要跑**。
 
-比如我的博客 Kirameku，它实际上由三个服务组成：
+比如我的博客 yexianglun，它实际上由三个服务组成：
 
 - **Next.js 前端** — 端口 3000
 - **FastAPI 后端** — 端口 8000
 - **reader3 阅读服务** — 端口 8085
 
-不可能让用户记 `http://boke.hiromu.top:3000`、`http://boke.hiromu.top:8000` 这种端口号。解决方案就是用 Nginx 做反向代理，把所有服务统一到 80/443 端口，通过路径区分转发。
+不可能让用户记 `http://blog.yexianglun.com:3000`、`http://blog.yexianglun.com:8000` 这种端口号。解决方案就是用 Nginx 做反向代理，把所有服务统一到 80/443 端口，通过路径区分转发。
 
 ## 什么是反向代理
 
 简单来说：Nginx 站在前面接客，根据请求路径判断应该交给后面哪个服务处理。
 
 ```
-用户 → boke.hiromu.top/api/xxx  → Nginx → FastAPI (8000)
-用户 → boke.hiromu.top/reader3/ → Nginx → reader3 (8085)
-用户 → boke.hiromu.top/         → Nginx → Next.js (3000)
+用户 → blog.yexianglun.com/api/xxx  → Nginx → FastAPI (8000)
+用户 → blog.yexianglun.com/reader3/ → Nginx → reader3 (8085)
+用户 → blog.yexianglun.com/         → Nginx → Next.js (3000)
 ```
 
 ## 完整配置
@@ -36,12 +36,12 @@ server {
     listen 80;
     listen 443 ssl;
     http2 on;
-    server_name boke.hiromu.top;
+    server_name blog.yexianglun.com;
     index index.html index.htm default.htm default.html;
-    include /www/server/panel/vhost/nginx/extension/Kirameku/*.conf;
+    include /www/server/panel/vhost/nginx/extension/yexianglun/*.conf;
 
     #CERT-APPLY-CHECK--START
-    include /www/server/panel/vhost/nginx/well-known/Kirameku.conf;
+    include /www/server/panel/vhost/nginx/well-known/yexianglun.conf;
     #CERT-APPLY-CHECK--END
 
     #SSL-START
@@ -55,8 +55,8 @@ server {
     if ($isRedcert != 1) {
         rewrite ^(/.*)$ https://$host$1 permanent;
     }
-    ssl_certificate    /www/server/panel/vhost/cert/Kirameku/fullchain.pem;
-    ssl_certificate_key    /www/server/panel/vhost/cert/Kirameku/privkey.pem;
+    ssl_certificate    /www/server/panel/vhost/cert/yexianglun/fullchain.pem;
+    ssl_certificate_key    /www/server/panel/vhost/cert/yexianglun/privkey.pem;
     ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
     ssl_ciphers EECDH+CHACHA20:EECDH+CHACHA20-draft:EECDH+AES128:RSA+AES128:EECDH+AES256:RSA+AES256:EECDH+3DES:RSA+3DES:!MD5;
     ssl_prefer_server_ciphers on;
@@ -78,7 +78,7 @@ server {
     }
 
     location /.well-known/ {
-        root  /www/wwwroot/Kirameku;
+        root  /www/wwwroot/yexianglun;
     }
 
     # Next.js Route Handler — 必须在 location /api/ 之前
@@ -146,8 +146,8 @@ server {
         proxy_cache off;
     }
 
-    access_log  /www/wwwlogs/Kirameku.log;
-    error_log  /www/wwwlogs/Kirameku.error.log;
+    access_log  /www/wwwlogs/yexianglun.log;
+    error_log  /www/wwwlogs/yexianglun.error.log;
 }
 ```
 
@@ -275,8 +275,8 @@ location ~* /(\.git|\.svn|\.vscode|\.idea|node_modules)/ {
 
 ```nginx
 # 在主配置中引入面板生成的 SSL、伪静态等配置
-include /www/server/panel/vhost/nginx/extension/Kirameku/*.conf;
-include /www/server/panel/vhost/rewrite/node_Kirameku.conf;
+include /www/server/panel/vhost/nginx/extension/yexianglun/*.conf;
+include /www/server/panel/vhost/rewrite/node_yexianglun.conf;
 ```
 
 好处是 SSL 证书续期、伪静态规则都能通过面板 UI 管理，不需要每次都手改 Nginx 配置。关键的反代规则写在面板的"配置文件"里就行。

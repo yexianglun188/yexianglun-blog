@@ -320,12 +320,12 @@ export function playLoveEgg() {
   floatingToast("你唤醒了这颗星球 🌍", { emoji: "💫", duration: 3500 });
 }
 
-/** 彩蛋「闪耀吧」：星星彩纸 —— 输入 kirameku */
+/** 彩蛋「闪耀吧」：星星彩纸 —— 输入 yexianglun */
 export function playKiramekuEgg() {
   confetti({
     count: 200,
     shapes: [2],
     colors: ["#a78bfa", "#67e8f9", "#f9a8d4", "#fde047"],
   });
-  floatingToast("KIRAMEKU —— 闪耀吧 ✨", { emoji: "🌟", duration: 3500 });
+  floatingToast("YEXIANGLUN —— 闪耀吧 ✨", { emoji: "🌟", duration: 3500 });
 }
