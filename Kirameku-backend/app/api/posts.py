@@ -26,6 +26,17 @@ def post_count(status: str | None = None, session: Session = Depends(get_session
     return {"count": post_service.count_posts(session, status)}
 
 
+# 注意：/search 必须注册在 /{slug} 之前，否则 "search" 会被当成 slug 解析
+@router.get("/search", response_model=list[PostOut])
+def search_posts(
+    q: str = Query(min_length=1, max_length=100),
+    size: int = Query(20, ge=1, le=50),
+    session: Session = Depends(get_session),
+):
+    """站内搜索：匹配标题 / 摘要 / 正文，只返回已发布文章"""
+    return post_service.search_posts(session, q, size)
+
+
 @router.get("/detail/{post_id}", response_model=PostDetail)
 def get_post_by_id(post_id: int, session: Session = Depends(get_session)):
     return post_service.get_post_by_id(session, post_id)

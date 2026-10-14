@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, Query, Request
-from sqlmodel import Session
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlmodel import Session, select
 
-from app.deps import get_session
+from app.deps import get_session, get_current_user
+from app.models import User
 from app.schemas import MessageCreate, MessageOut, MessageAdminUpdate
 from app.services import message_service
-from app.deps import get_current_user
-from app.api.github_auth import _get_github_user, get_github_user_optional
 
 router = APIRouter(prefix="/api/messages", tags=["留言板"])
 
@@ -31,8 +30,23 @@ def create_message(
     data: MessageCreate,
     request: Request,
     session: Session = Depends(get_session),
+    token: dict = Depends(get_current_user),
 ):
-    user = get_github_user_optional(request, session)
+    """发表留言 / 回复
+
+    需要登录（JWT）。访客身份会被拒绝（403）。
+    """
+    # 访客令牌：sub 是 guest_xxx，user 表里没有对应行，直接按访客规则拒绝
+    if token.get("guest"):
+        raise HTTPException(status_code=403, detail="访客身份不能留言，请注册账号")
+
+    username = token.get("sub")
+    user = session.exec(select(User).where(User.username == username)).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="登录状态已失效，请重新登录")
+    if user.is_guest:
+        raise HTTPException(status_code=403, detail="访客身份不能留言，请注册账号")
+
     ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
     if not ip:
         ip = request.headers.get("x-real-ip", "")

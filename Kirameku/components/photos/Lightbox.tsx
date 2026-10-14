@@ -4,7 +4,7 @@ import { useEffect, useCallback } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import type { Photo } from "@/data/photos";
+import type { Photo } from "@/app/api/albums";
 
 interface LightboxProps {
   photos: Photo[];

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import type { Photo } from "@/data/photos";
+import type { Photo } from "@/app/api/albums";
 
 interface PhotoCardProps {
   photo: Photo;

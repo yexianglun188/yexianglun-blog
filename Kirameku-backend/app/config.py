@@ -10,7 +10,12 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 72
 
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,https://boke.hiromu.top").split(",")
+# 允许跨域的前端来源：本地 + cpolar 内网穿透公网地址
+# （cpolar 免费版重启后随机域名会变，新域名要么改这里要么写进 .env 的 CORS_ORIGINS）
+CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,http://localhost:5173,https://b04a0eb.r21.cpolar.top",
+).split(",")
 
 # GitHub OAuth
 GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID", "")

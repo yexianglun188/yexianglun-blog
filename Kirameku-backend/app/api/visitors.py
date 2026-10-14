@@ -11,17 +11,27 @@ router = APIRouter(prefix="/api/visitors", tags=["访客记录"])
 def list_recent_visitors(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
+    only: str = Query("", description="human=只看真人 / bot=只看机器人 / 空=全部"),
     session: Session = Depends(get_session),
 ):
-    """获取最近访客列表"""
-    visitors = visitor_service.get_recent_visitors(session, page, size)
+    """获取最近访客列表（默认记录全部来源，机器人打 is_bot 标记）"""
+    visitors = visitor_service.get_recent_visitors(session, page, size, only)
     return {"code": 0, "data": visitors}
 
 
+@router.get("/stats")
+def visitor_stats(session: Session = Depends(get_session)):
+    """访客统计：总数 / 真人 / 机器人 / 本机 / 重复"""
+    return {"code": 0, "data": visitor_service.get_stats(session)}
+
+
 @router.get("/count")
-def visitor_count(session: Session = Depends(get_session)):
-    """获取总访客数"""
-    return {"code": 0, "count": visitor_service.get_visitor_count(session)}
+def visitor_count(
+    only: str = Query("", description="human=真人 / bot=机器人 / 空=全部"),
+    session: Session = Depends(get_session),
+):
+    """获取访客数"""
+    return {"code": 0, "count": visitor_service.get_visitor_count(session, only)}
 
 
 @router.get("/location")
@@ -56,6 +66,16 @@ def record_visitor(
 
     visitor_service.record_visit(session, ip, path, ua)
     return {"code": 0, "message": "ok"}
+
+
+@router.post("/cleanup")
+def clean_invalid_records(
+    scope: str = Query(..., description="duplicate=重复 / local=本机 / bot=机器人"),
+    session: Session = Depends(get_session),
+):
+    """清理无效访客记录"""
+    n = visitor_service.clean_records(session, scope)
+    return {"code": 0, "deleted": n, "scope": scope}
 
 
 @router.delete("/{visitor_id}")

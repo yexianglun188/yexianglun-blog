@@ -1,12 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel
 
-
-class GitHubUserOut(BaseModel):
-    id: int
-    login: str
-    avatar: str
-    bio: str
+from app.schemas.comment import GitHubUserOut, UserOut
 
 
 class ChatterCreate(BaseModel):
@@ -49,5 +44,8 @@ class ChatterCommentOut(BaseModel):
     likes: int = 0
     status: str
     created_at: datetime
+    user_id: int | None = None
+    # 作者：本地账号优先；github_user 仅为兼容历史评论
+    user: UserOut | None = None
     github_user: GitHubUserOut | None = None
     replies: list["ChatterCommentOut"] = []

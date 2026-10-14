@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, or_
 from fastapi import HTTPException
 
 from app.models import Post, Category, Tag, PostTag
@@ -219,6 +219,29 @@ def count_posts(session: Session, status: str | None = None) -> int:
     if status:
         q = q.where(Post.status == status)
     return session.exec(q).one()
+
+
+def search_posts(session: Session, keyword: str, size: int = 20) -> list[dict]:
+    """站内搜索：标题 / 摘要 / 正文模糊匹配，只返回已发布文章，按置顶和时间排序。"""
+    kw = (keyword or "").strip()
+    if not kw:
+        return []
+    like = f"%{kw}%"
+    q = (
+        select(Post)
+        .where(
+            Post.status == "published",
+            or_(
+                Post.title.contains(kw),
+                Post.description.contains(kw),
+                Post.content.contains(kw),
+            ),
+        )
+        .order_by(Post.is_pinned.desc(), Post.created_at.desc())
+        .limit(size)
+    )
+    posts = list(session.exec(q).all())
+    return [_post_to_dict(p, session) for p in posts]
 
 
 def toggle_like(session: Session, post_id: int, unlike: bool = False) -> dict:

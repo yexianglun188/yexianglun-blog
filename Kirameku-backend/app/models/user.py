@@ -14,5 +14,7 @@ class User(SQLModel, table=True):
     email: str = Field(default="", max_length=100)
     bio: str = Field(default="", max_length=500)
     is_admin: bool = Field(default=False)
+    # 访客身份：由「以访客身份浏览」产生，只用于前台展示，禁止留言
+    is_guest: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)

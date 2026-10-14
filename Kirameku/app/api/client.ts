@@ -23,7 +23,16 @@ async function request<T>(
     },
   });
   if (!res.ok) {
-    throw new ApiError(`API Error: ${res.status}`, res.status);
+    let detail = "";
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+      else if (typeof body?.message === "string") detail = body.message;
+      else if (Array.isArray(body?.detail)) detail = body.detail[0]?.msg ?? "";
+    } catch {
+      // 响应体不是 JSON，忽略
+    }
+    throw new ApiError(detail || `请求失败（${res.status}）`, res.status);
   }
   return res.json();
 }

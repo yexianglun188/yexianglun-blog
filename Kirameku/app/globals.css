@@ -236,3 +236,14 @@ input, textarea, [contenteditable], .prose, code, pre {
   75%  { transform: rotate(2deg) scale(1.01); transform-origin: bottom right; }
   100% { transform: rotate(0deg) scale(1); }
 }
+
+/* 彩蛋 toast 气泡入场动画 */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 时间倒流时给文字加的轻微模糊过渡 */
+.easteregg-timefreeze {
+  transition: filter .6s ease;
+}

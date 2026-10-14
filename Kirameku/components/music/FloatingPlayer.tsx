@@ -1,8 +1,11 @@
 "use client";
 
+import CoverImg from "@/components/music/CoverImg";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import { useMusic } from "@/components/providers/MusicProvider";
+import ImmersiveLyrics from "@/components/music/ImmersiveLyrics";
 
 const modeIcons: Record<string, { icon: React.ReactNode; label: string }> = {
   loop: {
@@ -22,12 +25,13 @@ const modeIcons: Record<string, { icon: React.ReactNode; label: string }> = {
 export default function FloatingPlayer() {
   const {
     currentSong, isPlaying, currentLyric, volume, isMuted, playMode, playlist, currentIndex,
-    togglePlay, nextSong, prevSong, setVolume, toggleMute, togglePlayMode, playSong,
+    togglePlay, nextSong, prevSong, setVolume, toggleMute, togglePlayMode, playSong, playError,
   } = useMusic();
   const [expanded, setExpanded] = useState(false);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [playlistUp, setPlaylistUp] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const playlistBtnRef = useRef<HTMLButtonElement>(null);
   const didDrag = useRef(false);
@@ -74,21 +78,30 @@ export default function FloatingPlayer() {
   return (
     <motion.div
       ref={panelRef}
-      drag
+      drag="x"
       dragMomentum={false}
       dragElastic={false}
       onDragStart={() => { didDrag.current = true; }}
       onDragEnd={() => { setTimeout(() => { didDrag.current = false; }, 100); }}
       className="fixed bottom-24 left-6 z-30"
-      style={{ touchAction: "none" }}
+      // 只允许横向拖拽换位：Framer 对单轴拖拽会自动设置 touch-action: pan-y，
+      // 手机端手指落在播放器上时页面仍可纵向滚动（全轴 drag 会强制 touch-action:none 吞掉滚动）
+      style={{ touchAction: "pan-y" }}
     >
       {expanded ? (
         /* Expanded pill bar with full controls */
         <div className="relative">
+          {/* 播放失败提示：把后端返回的失败原因直接告诉用户，避免「点了没声音」无从排查 */}
+          {playError && (
+            <div className="absolute bottom-14 left-0 right-0 flex items-start gap-2 px-3 py-2 rounded-2xl bg-red-500/95 dark:bg-red-600/95 text-white text-[11px] font-medium shadow-2xl backdrop-blur-sm">
+              <svg className="w-3.5 h-3.5 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+              <span className="flex-1 leading-snug">{playError}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5 h-12 pl-1 pr-1.5 rounded-full bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-2xl select-none">
             {/* Cover */}
             <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-sm cursor-grab active:cursor-grabbing">
-              <img src={currentSong.cover} alt="" className="w-full h-full object-cover pointer-events-none" draggable={false} />
+              <CoverImg src={currentSong.cover} className="w-full h-full pointer-events-none" />
             </div>
 
             {/* Info */}
@@ -115,7 +128,7 @@ export default function FloatingPlayer() {
             </button>
 
             {/* Next */}
-            <button type="button" onClick={nextSong} title="下一首"
+            <button type="button" onClick={() => nextSong()} title="下一首"
               className="w-7 h-7 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-indigo-500 hover:bg-white/40 dark:hover:bg-slate-700/50 transition-colors shrink-0">
               <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
             </button>
@@ -139,6 +152,12 @@ export default function FloatingPlayer() {
               title="音量"
               className="w-14 h-1 accent-indigo-500 cursor-pointer shrink-0"
             />
+
+            {/* Fullscreen lyrics */}
+            <button type="button" onClick={() => setLyricsOpen(true)} title="全屏歌词"
+              className="w-7 h-7 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-500 hover:bg-white/30 dark:hover:bg-slate-700/50 transition-colors shrink-0">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 2H2v6M16 2h6v6M8 22H2v-6M16 22h6v-6" /><path strokeLinecap="round" strokeLinejoin="round" d="M7 12h2l1.5-3.5L14 15l1.5-3H17" /></svg>
+            </button>
 
             {/* Playlist toggle */}
             <button ref={playlistBtnRef} type="button" onClick={handleTogglePlaylist} title="播放列表"
@@ -172,7 +191,7 @@ export default function FloatingPlayer() {
                   }`}
                 >
                   <div className="w-7 h-7 rounded overflow-hidden shrink-0">
-                    <img src={song.cover} alt="" className="w-full h-full object-cover" />
+                    <CoverImg src={song.cover} className="w-full h-full" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className={`text-[11px] font-bold truncate ${i === currentIndex ? "text-indigo-600 dark:text-indigo-300" : "text-slate-800 dark:text-slate-200"}`}>
@@ -198,7 +217,7 @@ export default function FloatingPlayer() {
           onClick={() => { if (!didDrag.current) setExpanded(true); }}
           className="w-12 h-12 rounded-full bg-white/50 dark:bg-slate-800/60 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl flex items-center justify-center select-none overflow-hidden cursor-pointer hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200"
         >
-          <img src={currentSong.cover} alt="" className="w-full h-full object-cover rounded-full pointer-events-none" draggable={false} />
+          <CoverImg src={currentSong.cover} rounded="rounded-full" className="w-full h-full pointer-events-none" />
           {isPlaying && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
               <div className="flex items-end gap-[2px] h-3">
@@ -210,6 +229,15 @@ export default function FloatingPlayer() {
           )}
         </div>
       )}
+
+      {/* 全屏沉浸式歌词：用 Portal 挂到 body，脱离 FloatingPlayer 的 z-30 stacking context，避免被导航栏 z-50 遮挡 */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {lyricsOpen && <ImmersiveLyrics onClose={() => setLyricsOpen(false)} />}
+          </AnimatePresence>,
+          document.body
+        )}
     </motion.div>
   );
 }

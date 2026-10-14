@@ -59,12 +59,9 @@ export default async function AboutPage() {
 
           {/* 标题区 */}
           <div className="mt-4 md:mt-6 mb-5 md:mb-8 border-b border-slate-300/50 dark:border-slate-700 pb-5 md:pb-8">
-            <h1 className="text-2xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight mb-2 md:mb-3 transition-colors duration-700">
-              关于我
+            <h1 className="text-xl md:text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-[0.12em] transition-colors duration-700">
+              {siteConfig.signature}
             </h1>
-            <p className="text-sm md:text-lg text-indigo-600 dark:text-indigo-400 font-bold tracking-widest uppercase transition-colors duration-700">
-              Hello World, I&apos;m {siteConfig.authorName}
-            </p>
           </div>
 
           {/* Markdown 正文 */}

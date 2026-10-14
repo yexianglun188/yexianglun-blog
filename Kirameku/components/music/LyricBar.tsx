@@ -8,7 +8,12 @@ export default function LyricBar() {
   const [displayedText, setDisplayedText] = useState("");
   const prevTextRef = useRef("");
   const charRef = useRef(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 跑马灯状态：文字超出一行宽度时横向循环滚动（手机端屏幕窄，原来直接被 truncate 截断）
+  const textWrapRef = useRef<HTMLParagraphElement | null>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const [marquee, setMarquee] = useState<{ dist: number; duration: number } | null>(null);
 
   // Determine the target text: lyrics when playing, saying when paused
   const targetText = isPlaying ? currentLyric : saying;
@@ -33,6 +38,35 @@ export default function LyricBar() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [targetText]);
 
+  // 打字机结束后（或窗口尺寸变化时）测量是否溢出，决定是否跑马灯
+  const measureMarquee = () => {
+    const p = textWrapRef.current;
+    const box = boxRef.current;
+    if (!p || !box) return;
+    const dist = p.scrollWidth - box.clientWidth;
+    if (dist > 8) {
+      setMarquee((prev) =>
+        prev && Math.abs(prev.dist - dist) < 4
+          ? prev
+          : { dist: dist + 16, duration: Math.max(8, Math.min(24, (dist + 16) / 28)) }
+      );
+    } else {
+      setMarquee((prev) => (prev === null ? prev : null));
+    }
+  };
+
+  useEffect(() => {
+    measureMarquee();
+    // 打字进行中每隔一段时间复测一次，打完自然收敛
+    const t = setInterval(measureMarquee, 600);
+    window.addEventListener("resize", measureMarquee);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("resize", measureMarquee);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedText]);
+
   if (!currentSong) return null;
 
   const waves = [
@@ -43,6 +77,8 @@ export default function LyricBar() {
     { color: "bg-indigo-300", delay: "300ms" },
   ];
 
+  const shownText = displayedText || (isPlaying ? "♪ ♪" : saying || "暂无歌词，点击换一句");
+
   return (
     <>
       <style>{`
@@ -50,6 +86,18 @@ export default function LyricBar() {
         .animate-cursor { animation: cursorBlink 0.8s step-end infinite; }
         @keyframes safeWave { 0%, 100% { height: 8px; } 50% { height: 28px; } }
         .safe-wave-active { animation: safeWave 1s ease-in-out infinite; }
+        /* 歌词跑马灯：滚到头停一会再滚回来，往复循环 */
+        @keyframes lyricMarquee {
+          0%   { transform: translateX(0); }
+          42%  { transform: translateX(calc(-1 * var(--marquee-dist))); }
+          50%  { transform: translateX(calc(-1 * var(--marquee-dist))); }
+          92%  { transform: translateX(0); }
+          100% { transform: translateX(0); }
+        }
+        .lyric-marquee {
+          animation: lyricMarquee var(--marquee-duration) linear infinite;
+          will-change: transform;
+        }
       `}</style>
 
       <div
@@ -57,7 +105,7 @@ export default function LyricBar() {
         onClick={() => { if (!isPlaying && saying) refreshSaying(); }}
       >
         {/* Waveform */}
-        <div className="flex items-end justify-center gap-[4px] h-8 w-10 md:w-16">
+        <div className="flex items-end justify-center gap-[4px] h-8 w-10 md:w-16 shrink-0">
           {waves.map((wave, i) => (
             <div
               key={i}
@@ -69,16 +117,29 @@ export default function LyricBar() {
           ))}
         </div>
 
-        {/* Lyric / Saying */}
-        <div className="flex-1 px-3 md:px-8 flex justify-center items-center overflow-hidden">
-          <p className="text-white text-sm md:text-lg font-bold tracking-wider md:tracking-widest truncate drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]">
-            {displayedText || (isPlaying ? "♪ ♪" : saying || "暂无歌词，点击换一句")}
+        {/* Lyric / Saying：溢出时跑马灯轮播，否则居中静止 */}
+        <div ref={boxRef} className="flex-1 min-w-0 px-3 md:px-8 flex justify-center items-center overflow-hidden">
+          <p
+            ref={textWrapRef}
+            style={
+              marquee
+                ? ({
+                    "--marquee-dist": `${marquee.dist}px`,
+                    "--marquee-duration": `${marquee.duration}s`,
+                  } as React.CSSProperties)
+                : undefined
+            }
+            className={`text-white text-sm md:text-lg font-bold tracking-wider md:tracking-widest whitespace-nowrap drop-shadow-[0_0_8px_rgba(99,102,241,0.8)] ${
+              marquee ? "lyric-marquee" : ""
+            }`}
+          >
+            {shownText}
             <span className="inline-block w-[3px] h-5 bg-indigo-400 align-middle ml-1 shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-cursor" />
           </p>
         </div>
 
         {/* Music icon */}
-        <div className="w-10 md:w-16 flex justify-end">
+        <div className="w-10 md:w-16 flex justify-end shrink-0">
           <svg
             className={`w-6 h-6 text-indigo-400/50 transition-all duration-500 ${isPlaying ? "animate-bounce" : "opacity-30"}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor"

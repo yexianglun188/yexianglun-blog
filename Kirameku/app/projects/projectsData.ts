@@ -16,50 +16,31 @@ export interface Project {
   statusLabel: string;
 }
 
+// 项目展示为前端静态数据，新增项目直接在数组里加一条即可；
+// coverImage 建议放 public/images/ 下的 webp（原模板的 /images/projects/ 目录不存在，会裂图）
 export const projects: Project[] = [
   {
-    id: "haxatom",
-    name: "HAXAtom",
-    description: "原子化解耦 · 乐高式拼装 — 全栈 AI 智能体管理与多端分发平台",
+    id: "kirameku",
+    name: "Kirameku 个人博客",
+    description: "Next.js + FastAPI 前后端分离的全栈个人博客，就是你现在看的这个网站",
     longDescription:
-      "基于 LangChain/LangGraph 的 AI 智能体管理平台，支持 RAG 知识库、可视化 Agent 编排、多渠道分发（Web、飞书、钉钉、QQ、Telegram）。采用原子化架构设计，模块可自由组合，乐高式拼装。",
-    coverImage: "/images/projects/haxatom.webp",
-    techStack: ["Python", "Vue 3", "FastAPI", "LangChain", "LangGraph", "RAG"],
+      "从零搭建的全栈博客系统：前端 Next.js 16 + React 19 + Tailwind CSS 4，后端 FastAPI + SQLModel + PostgreSQL，管理后台 Vue 3 + Element Plus（vue-pure-admin）。包含文章（Markdown/目录/评论）、说说、照片墙、留言板、音乐播放器、小说阅读、工具箱（36 个工具 + 18 个小游戏）、站点子站（18 个实验页面）等模块；自研本地账号体系（注册/登录/访客三态）与访客机器人识别，支持一键部署脚本与内网穿透公网访问。",
+    coverImage: "/images/42.webp",
+    techStack: [
+      "Next.js 16",
+      "React 19",
+      "TypeScript",
+      "Tailwind CSS 4",
+      "FastAPI",
+      "SQLModel",
+      "PostgreSQL",
+      "Vue 3",
+    ],
     links: {
-      github: "https://github.com/Xinghongia/HAXAtom",
+      github: "https://github.com/yexianglun188/Kirameku",
     },
     featured: true,
     status: "active",
-    statusLabel: "维护中",
-  },
-  {
-    id: "starvid",
-    name: "StarVid 星河",
-    description: "全功能即时通讯社交应用 — 实时聊天、好友管理、群组、朋友圈",
-    longDescription:
-      "前后端分离架构的 IM 社交应用，支持文本/图片/语音/视频/文件消息、好友管理、群聊 @ 功能、朋友圈动态、WebSocket 实时推送、JWT 双令牌认证。前端 Flutter + GetX，后端 Spring Boot + MyBatis-Plus + MySQL + Redis。",
-    coverImage: "/images/projects/starvid.webp",
-    techStack: ["Flutter", "Spring Boot", "MySQL", "Redis", "WebSocket", "GetX", "MyBatis-Plus"],
-    links: {
-      gitee: "https://gitee.com/hongzyh/xinhe",
-    },
-    featured: false,
-    status: "active",
-    statusLabel: "开发中",
-  },
-  {
-    id: "hiromu-top",
-    name: "hiromu.top",
-    description: "资源分享站点",
-    longDescription:
-      "基于 Vue 构建的资源分享网站，提供丰富的前端交互体验和优质的资源分享。",
-    coverImage: "/images/projects/hiromu-top.webp",
-    techStack: ["Vue", "APlayer", "Live2D", "CSS3"],
-    links: {
-      live: "https://hiromu.top/",
-    },
-    featured: false,
-    status: "active",
-    statusLabel: "已上线",
+    statusLabel: "持续迭代中",
   },
 ];

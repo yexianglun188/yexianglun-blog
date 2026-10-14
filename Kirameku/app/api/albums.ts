@@ -21,6 +21,14 @@ export interface PhotoItem {
   created_at: string;
 }
 
+/** 前端展示用照片类型（由后端 PhotoItem 转换而来） */
+export interface Photo {
+  id: string;
+  url: string;
+  caption: string;
+  orientation: "landscape" | "portrait" | "square";
+}
+
 export function getAlbums() {
   return request<AlbumItem[]>("/api/albums");
 }

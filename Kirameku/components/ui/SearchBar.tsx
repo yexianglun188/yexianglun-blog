@@ -8,15 +8,29 @@ export default function SearchBar() {
   const [value, setValue] = useState("");
 
   function handleSubmit() {
-    if (value.trim() === "5201314") {
+    const q = value.trim();
+    if (!q) return;
+    // 保留原彩蛋：输入暗号解锁子站
+    if (q === "5201314") {
       localStorage.setItem("garden-unlock", "true");
       router.push("/garden");
       setValue("");
+      return;
     }
+    // 彩蛋：摩斯密码 "-.- .. .-. .- -- . -.- ..-" = KIRAMEKU，解锁情书
+    if (q === "-.- .. .-. .- -- . -.- ..-" || q.toLowerCase() === "kirameku") {
+      localStorage.setItem("love-unlock", "true");
+      router.push("/love");
+      setValue("");
+      return;
+    }
+    // 其余输入作为站内搜索关键词
+    router.push(`/search?q=${encodeURIComponent(q)}`);
+    setValue("");
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto mb-10">
+    <div className="w-full max-w-2xl mx-auto mb-6 md:mb-10">
       <form
         className="relative group"
         onSubmit={(e) => {
@@ -26,8 +40,8 @@ export default function SearchBar() {
       >
         <input
           type="text"
-          className="w-full pl-14 pr-6 py-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-3xl shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 dark:text-slate-200 transition-all placeholder-slate-500 dark:placeholder-slate-400 font-medium text-lg"
-          placeholder="输入暗号探索更多..."
+          className="w-full pl-12 md:pl-14 pr-5 md:pr-6 py-3 md:py-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl md:rounded-3xl shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 dark:text-slate-200 transition-all placeholder-slate-500 dark:placeholder-slate-400 font-medium text-base md:text-lg"
+          placeholder="搜索文章，或输入暗号探索更多..."
           value={value}
           onChange={(e) => setValue(e.target.value)}
           autoComplete="off"

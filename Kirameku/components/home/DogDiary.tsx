@@ -2,22 +2,23 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getRandomDiary, type DogDiaryItem } from "@/app/api/diary";
+
+const EMPTY_TIP = "还没有日记，去后台添加一条吧~";
 
 export default function DogDiary() {
-  const [text, setText] = useState("");
+  const [diary, setDiary] = useState<DogDiaryItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   const fetchDiary = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("https://v2.xxapi.cn/api/dog");
-      const json = await res.json();
-      if (json.code === 200 && json.data) {
-        setText(json.data);
-      }
+      // 后台维护的日记，每次随机取一条
+      const data = await getRandomDiary();
+      setDiary(data ?? null);
     } catch {
-      setText("获取失败，点击刷新重试~");
+      setDiary(null);
     } finally {
       setLoading(false);
     }
@@ -26,6 +27,9 @@ export default function DogDiary() {
   useEffect(() => {
     fetchDiary();
   }, [fetchDiary]);
+
+  const text = diary?.content || "";
+  const isEmpty = !loading && !text;
 
   return (
     <>
@@ -58,12 +62,21 @@ export default function DogDiary() {
             </button>
           </div>
           <p className="text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed line-clamp-5 transition-colors duration-700">
-            {loading ? "加载中..." : text}
+            {loading ? "加载中..." : isEmpty ? EMPTY_TIP : text}
           </p>
         </div>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-3 self-end">
-          点击查看全文
-        </p>
+        <div className="flex items-end justify-between gap-2">
+          {diary?.author ? (
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+              —— {diary.author}
+            </span>
+          ) : (
+            <span />
+          )}
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-3 self-end shrink-0">
+            点击查看全文
+          </p>
+        </div>
       </div>
 
       {/* Modal */}
@@ -100,9 +113,15 @@ export default function DogDiary() {
                   </svg>
                 </button>
               </div>
-              <p className="text-base text-slate-700 dark:text-slate-300 font-medium leading-relaxed mb-6">
-                {loading ? "加载中..." : text}
+              <p className="text-base text-slate-700 dark:text-slate-300 font-medium leading-relaxed mb-2">
+                {loading ? "加载中..." : isEmpty ? EMPTY_TIP : text}
               </p>
+              {diary?.author && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-6 text-right">
+                  —— {diary.author}
+                </p>
+              )}
+              {!diary?.author && <div className="mb-6" />}
               <button
                 type="button"
                 onClick={fetchDiary}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlmodel import Session
 
 from app.deps import get_session
@@ -9,7 +9,7 @@ from app.schemas import (
 from app.schemas.comment import CommentAdminUpdate
 from app.services import chatter_service
 from app.deps import get_current_user
-from app.api.github_auth import get_github_user_optional
+from app.api.identity import resolve_identity
 
 router = APIRouter(prefix="/api/chatters", tags=["说说"])
 
@@ -46,13 +46,20 @@ def create_chatter_comment(
     request: Request,
     session: Session = Depends(get_session),
 ):
-    user = get_github_user_optional(request, session)
+    ident = resolve_identity(request, session)
+    if not ident.can_comment:
+        if ident.is_guest:
+            raise HTTPException(403, "访客身份不能评论，请注册账号")
+        raise HTTPException(401, "请先登录后再评论")
+
     ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
     if not ip:
         ip = request.headers.get("x-real-ip", "")
     if not ip:
         ip = request.client.host if request.client else ""
-    return chatter_service.create_chatter_comment(session, data, user, ip)
+    return chatter_service.create_chatter_comment(
+        session, data, ident.github_user, ident.user, ip
+    )
 
 
 # ---- 管理接口（必须在 /{chatter_id} 之前注册，否则 "admin" 会被当成 chatter_id）----

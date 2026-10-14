@@ -1,4 +1,7 @@
+"use client";
+
 import { siteConfig } from "@/siteConfig";
+import { useToast } from "@/components/providers/ToastProvider";
 
 export default function ProfileCard({
   postCount = 0,
@@ -108,6 +111,22 @@ function SocialBtn({
   type: string;
   url?: string;
 }) {
+  const { addToast } = useToast();
+
+  // QQ 不用 tencent:// 协议（浏览器未装 QQ 客户端时点击无反应），
+  // 改成点击复制 QQ 号
+  const copyQq = async () => {
+    const qq = siteConfig.social?.qq;
+    if (!qq) return;
+    try {
+      await navigator.clipboard.writeText(qq);
+      addToast("success", `QQ 号 ${qq} 已复制，加好友请备注~`);
+    } catch {
+      // 剪贴板不可用（非 https / 旧浏览器）时降级为提示
+      addToast("info", `我的 QQ：${qq}`);
+    }
+  };
+
   const getIcon = () => {
     switch (type) {
       case "github":
@@ -147,12 +166,20 @@ function SocialBtn({
 
   const content = (
     <div
-      className="w-10 h-10 rounded-xl bg-white/50 dark:bg-slate-700/50 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:scale-125 hover:-translate-y-1 transition-all duration-300 border border-white/40 dark:border-white/10 shadow-sm"
+      className="w-10 h-10 rounded-xl bg-white/50 dark:bg-slate-700/50 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:scale-125 hover:-translate-y-1 transition-all duration-300 border border-white/40 dark:border-white/10 shadow-sm cursor-pointer"
       title={type}
     >
       {getIcon()}
     </div>
   );
+
+  if (type === "qq") {
+    return (
+      <button type="button" onClick={copyQq} aria-label="复制 QQ 号">
+        {content}
+      </button>
+    );
+  }
 
   return url ? (
     <a href={url} target="_blank" rel="noopener noreferrer">

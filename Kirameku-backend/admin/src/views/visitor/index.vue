@@ -1,14 +1,30 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
 import { message } from "@/utils/message";
-import { getVisitors, getVisitorCount, deleteVisitor, clearVisitors } from "@/api/visitor";
-import type { VisitorItem } from "@/api/visitor";
+import {
+  getVisitors,
+  getVisitorCount,
+  getVisitorStats,
+  cleanVisitors,
+  deleteVisitor,
+  clearVisitors
+} from "@/api/visitor";
+import type { VisitorItem, VisitorStats } from "@/api/visitor";
 import type { PaginationProps } from "@pureadmin/table";
 
 defineOptions({ name: "VisitorIndex" });
 
 const loading = ref(false);
 const dataList = ref<VisitorItem[]>([]);
+/** 数据过滤：all 全部 / human 只看真人 / bot 只看机器人 */
+const filter = ref<"all" | "human" | "bot">("all");
+const stats = ref<VisitorStats>({
+  total: 0,
+  bot: 0,
+  local: 0,
+  duplicate: 0,
+  human: 0
+});
 
 const pagination = reactive<PaginationProps>({
   total: 0,
@@ -24,6 +40,7 @@ const columns: TableColumnList = [
   { label: "运营商", prop: "org", minWidth: 120, slot: "org" },
   { label: "ASN", prop: "asn", width: 120, slot: "asn" },
   { label: "网络", prop: "network", width: 80, slot: "network" },
+  { label: "性质", prop: "kind", width: 100, slot: "kind" },
   { label: "浏览器", prop: "browser", width: 90 },
   { label: "系统", prop: "os", width: 90 },
   { label: "设备", prop: "device_type", width: 70 },
@@ -46,18 +63,27 @@ const columns: TableColumnList = [
 async function onSearch() {
   loading.value = true;
   try {
-    const [res, countRes] = await Promise.all([
+    const only = filter.value === "all" ? "" : filter.value;
+    const [res, countRes, statsRes] = await Promise.all([
       getVisitors({
         page: pagination.currentPage,
-        size: pagination.pageSize
+        size: pagination.pageSize,
+        only
       }),
-      getVisitorCount()
+      getVisitorCount(only),
+      getVisitorStats()
     ]);
     dataList.value = res.data ?? [];
     pagination.total = countRes.count;
+    stats.value = statsRes.data;
   } finally {
     loading.value = false;
   }
+}
+
+function handleFilterChange() {
+  pagination.currentPage = 1;
+  onSearch();
 }
 
 function handleSizeChange(val: number) {
@@ -69,6 +95,21 @@ function handleSizeChange(val: number) {
 function handleCurrentChange(val: number) {
   pagination.currentPage = val;
   onSearch();
+}
+
+async function handleClean(scope: "duplicate" | "local" | "bot") {
+  const nameMap = {
+    duplicate: "重复数据",
+    local: "本机/内网记录",
+    bot: "机器人/爬虫记录"
+  };
+  try {
+    const res = await cleanVisitors(scope);
+    message(`已清理 ${res.deleted} 条${nameMap[scope]}`, { type: "success" });
+    onSearch();
+  } catch (e: any) {
+    message(e?.message ?? "清理失败", { type: "error" });
+  }
 }
 
 async function handleDelete(row: VisitorItem) {
@@ -98,15 +139,69 @@ onMounted(() => onSearch());
   <div class="p-4">
     <el-card shadow="never">
       <template #header>
-        <div class="flex justify-between items-center">
-          <span class="font-medium">访客记录</span>
+        <div class="flex justify-between items-center flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <span class="font-medium">访客记录</span>
+            <el-tag size="small" type="info">共 {{ stats.total }}</el-tag>
+            <el-tag size="small" type="success">真人 {{ stats.human }}</el-tag>
+            <el-tag v-if="stats.bot" size="small" type="warning">
+              机器人 {{ stats.bot }}
+            </el-tag>
+            <el-tag v-if="stats.local" size="small" type="info">
+              本机 {{ stats.local }}
+            </el-tag>
+            <el-tag v-if="stats.duplicate" size="small" type="danger">
+              重复 {{ stats.duplicate }}
+            </el-tag>
+          </div>
           <el-popconfirm title="确认清空所有访客记录？" @confirm="handleClear">
             <template #reference>
-              <el-button type="danger" size="small">清空</el-button>
+              <el-button type="danger" size="small">清空全部</el-button>
             </template>
           </el-popconfirm>
         </div>
       </template>
+
+      <div class="flex items-center gap-2 mb-3 flex-wrap">
+        <el-radio-group v-model="filter" size="small" @change="handleFilterChange">
+          <el-radio-button label="all">全部来源</el-radio-button>
+          <el-radio-button label="human">只看真人</el-radio-button>
+          <el-radio-button label="bot">只看机器人</el-radio-button>
+        </el-radio-group>
+
+        <div class="flex-1" />
+
+        <el-popconfirm
+          title="清理同一 IP 同一页面 5 分钟内的重复记录？"
+          @confirm="handleClean('duplicate')"
+        >
+          <template #reference>
+            <el-button size="small" :disabled="!stats.duplicate">
+              清理重复{{ stats.duplicate ? `(${stats.duplicate})` : "" }}
+            </el-button>
+          </template>
+        </el-popconfirm>
+        <el-popconfirm
+          title="清理本机 / 内网 IP 的访问记录？"
+          @confirm="handleClean('local')"
+        >
+          <template #reference>
+            <el-button size="small" :disabled="!stats.local">
+              清理本机{{ stats.local ? `(${stats.local})` : "" }}
+            </el-button>
+          </template>
+        </el-popconfirm>
+        <el-popconfirm
+          title="清理机器人 / 爬虫的访问记录？"
+          @confirm="handleClean('bot')"
+        >
+          <template #reference>
+            <el-button size="small" type="warning" :disabled="!stats.bot">
+              清理机器人{{ stats.bot ? `(${stats.bot})` : "" }}
+            </el-button>
+          </template>
+        </el-popconfirm>
+      </div>
 
       <pure-table
         :data="dataList"
@@ -126,8 +221,9 @@ onMounted(() => onSearch());
         <template #location="{ row }">
           <span class="text-sm">
             {{
-              [row.country, row.region, row.city, row.district].filter(Boolean).join(" · ") ||
-              "未知"
+              [row.country, row.region, row.city, row.district]
+                .filter(Boolean)
+                .join(" · ") || "未知"
             }}
           </span>
         </template>
@@ -147,6 +243,9 @@ onMounted(() => onSearch());
             <template #content>
               <div class="text-xs">{{ row.org }}</div>
               <div v-if="row.org_cn" class="text-xs mt-1">{{ row.org_cn }}</div>
+              <div class="text-xs mt-1 text-gray-300 break-all">
+                {{ row.user_agent }}
+              </div>
             </template>
             <span>{{ row.org }}</span>
           </el-tooltip>
@@ -158,6 +257,14 @@ onMounted(() => onSearch());
             <el-tag v-else-if="row.is_mobile" size="small" type="success">移动</el-tag>
             <el-tag v-else size="small">宽带</el-tag>
             <el-tag v-if="row.is_proxy" size="small" type="danger">代理</el-tag>
+          </div>
+        </template>
+
+        <template #kind="{ row }">
+          <div class="flex gap-1 justify-center">
+            <el-tag v-if="row.is_bot" size="small" type="warning">机器人</el-tag>
+            <el-tag v-else-if="row.is_local" size="small" type="info">本机</el-tag>
+            <el-tag v-else size="small" type="success">真人</el-tag>
           </div>
         </template>
 

@@ -6,7 +6,9 @@ from jose import jwt, JWTError
 
 from app.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_HOURS
 
-security = HTTPBearer()
+# auto_error=False：未带令牌时自己抛 401（带中文提示），
+# 默认行为是 FastAPI 直接返回 403 "Not authenticated"，对前台不友好。
+security = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -29,5 +31,9 @@ def decode_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="无效的令牌")
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> dict:
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="请先登录")
     return decode_token(credentials.credentials)

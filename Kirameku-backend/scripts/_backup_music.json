@@ -1,0 +1,128 @@
+{
+  "tracks": [
+    {
+      "id": "qq:001SSbin33rFNv",
+      "platform": "qq",
+      "songId": "001SSbin33rFNv",
+      "title": "路小雨",
+      "artist": "周杰伦",
+      "album": "不能说的秘密 电影原声带",
+      "cover": "https://y.gtimg.cn/music/photo_new/T002R300x300M000001UP7mW458ipG.jpg",
+      "duration": "1:39",
+      "src": ""
+    },
+    {
+      "id": "qq:002MXZNu1GToOk",
+      "platform": "qq",
+      "songId": "002MXZNu1GToOk",
+      "title": "不能说的秘密",
+      "artist": "周杰伦",
+      "album": "不能说的秘密 电影原声带",
+      "cover": "https://y.gtimg.cn/music/photo_new/T002R300x300M000001UP7mW458ipG.jpg",
+      "duration": "4:56",
+      "src": ""
+    },
+    {
+      "id": "netease:3397410783",
+      "platform": "netease",
+      "songId": "3397410783",
+      "title": "安静",
+      "artist": "提米FM",
+      "album": "",
+      "cover": "",
+      "duration": "",
+      "src": ""
+    },
+    {
+      "id": "qq:000amRvH3wxv56",
+      "platform": "qq",
+      "songId": "000amRvH3wxv56",
+      "title": "安静",
+      "artist": "周杰伦",
+      "album": "范特西",
+      "cover": "https://y.gtimg.cn/music/photo_new/T002R300x300M000000I5jJB3blWeN.jpg",
+      "duration": "5:34",
+      "src": ""
+    },
+    {
+      "id": "qq:0004jPDk2eB2dt",
+      "platform": "qq",
+      "songId": "0004jPDk2eB2dt",
+      "title": "起风了 (旧版)",
+      "artist": "买辣椒也用券",
+      "album": "起风了 (旧版)",
+      "cover": "https://y.gtimg.cn/music/photo_new/T002R300x300M000003j3NMw1ZBpsv.jpg",
+      "duration": "5:12",
+      "src": ""
+    },
+    {
+      "id": "netease:1330348068",
+      "platform": "netease",
+      "songId": "1330348068",
+      "title": "起风了",
+      "artist": "冯沁苑(买辣椒也用券)",
+      "album": "",
+      "cover": "",
+      "duration": "",
+      "src": ""
+    },
+    {
+      "id": "netease:1901371647",
+      "platform": "netease",
+      "songId": "1901371647",
+      "title": "孤勇者",
+      "artist": "陈奕迅",
+      "album": "",
+      "cover": "",
+      "duration": "",
+      "src": ""
+    },
+    {
+      "id": "netease:2668397359",
+      "platform": "netease",
+      "songId": "2668397359",
+      "title": "晴天 (原唱 周杰伦)",
+      "artist": "RyaVocal",
+      "album": "",
+      "cover": "",
+      "duration": "",
+      "src": ""
+    }
+  ],
+  "site_config": {
+    "site_title": "Kirameku",
+    "site_description": "煌めく — 一个个人博客",
+    "icp_number": "",
+    "icp_link": "",
+    "cloud_music_playlist_id": 17943739323,
+    "cloud_music_platform": "netease",
+    "cloud_music_ids": [
+      "3397410783",
+      "1330348068",
+      "1901371647",
+      "2668397359"
+    ],
+    "cloud_music_meta": [
+      {
+        "id": "3397410783",
+        "name": "安静",
+        "artist": "提米FM"
+      },
+      {
+        "id": "1330348068",
+        "name": "起风了",
+        "artist": "冯沁苑(买辣椒也用券)"
+      },
+      {
+        "id": "1901371647",
+        "name": "孤勇者",
+        "artist": "陈奕迅"
+      },
+      {
+        "id": "2668397359",
+        "name": "晴天 (原唱 周杰伦)",
+        "artist": "RyaVocal"
+      }
+    ]
+  }
+}

@@ -6,7 +6,7 @@ import { Camera } from "lucide-react";
 import AlbumCard from "@/components/photos/AlbumCard";
 import type { Album } from "@/components/photos/AlbumCard";
 import Lightbox from "@/components/photos/Lightbox";
-import type { Photo } from "@/data/photos";
+import type { Photo } from "@/app/api/albums";
 import { getAlbums, getAlbumPhotos } from "@/app/api";
 
 export default function PhotoWallPage() {

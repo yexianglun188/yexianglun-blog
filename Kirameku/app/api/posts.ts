@@ -52,3 +52,8 @@ export function likePost(postId: number, unlike = false) {
     method: "POST",
   });
 }
+
+/** 站内搜索：标题 / 摘要 / 正文 */
+export function searchPosts(q: string, size = 20) {
+  return request<PostItem[]>(`/api/posts/search${qs({ q, size })}`);
+}

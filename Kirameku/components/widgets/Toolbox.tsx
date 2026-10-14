@@ -53,6 +53,7 @@ const MovieBoxOfficeApp = lazy(() => import("./toolbox/MovieBoxOfficeApp"));
 const GitHubRepoApp = lazy(() => import("./toolbox/GitHubRepoApp"));
 const GitHubUserApp = lazy(() => import("./toolbox/GitHubUserApp"));
 const SearchApp = lazy(() => import("./toolbox/SearchApp"));
+const DoubanApp = lazy(() => import("./toolbox/DoubanApp"));
 
 interface AppDef {
   id: string;
@@ -146,6 +147,17 @@ const allApps: AppDef[] = [
       </svg>
     ),
     component: MovieBoxOfficeApp,
+  },
+  {
+    id: "douban",
+    name: "豆瓣榜单",
+    icon: (
+      <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="18" height="18" rx="3" stroke="#22c55e" strokeWidth="1.5" />
+        <text x="12" y="16.5" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#22c55e">豆</text>
+      </svg>
+    ),
+    component: DoubanApp,
   },
   {
     id: "githubuser",
@@ -697,6 +709,23 @@ export default function Toolbox() {
     return () => window.removeEventListener("close-toolbox", handleClose);
   }, []);
 
+  // 外部打开：/tools 页点击工具时 dispatch open-toolbox，携带工具 id 直接弹出对应工具
+  useEffect(() => {
+    const handleOpen = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (id === "games") {
+        // 小游戏走独立面板
+        window.dispatchEvent(new Event("open-games-panel"));
+        return;
+      }
+      if (!id || !allApps.some((a) => a.id === id)) return;
+      setActiveApp(id);
+      setIsOpen(true);
+    };
+    window.addEventListener("open-toolbox", handleOpen);
+    return () => window.removeEventListener("open-toolbox", handleOpen);
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
@@ -866,7 +895,8 @@ export default function Toolbox() {
 
       {/* 悬浮按钮 */}
       <motion.div
-        drag
+        // 只允许横向拖拽换位，纵向滚动交给页面（全轴 drag 会强制 touch-action:none）
+        drag="x"
         dragMomentum={false}
         dragElastic={false}
         onDragStart={() => { didDrag.current = true; }}
@@ -897,7 +927,8 @@ export default function Toolbox() {
           }}
           title="工具箱"
           className="w-12 h-12 rounded-2xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl flex items-center justify-center hover:shadow-2xl transition-all text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-95"
-          style={{ touchAction: "none" }}
+          // pan-y：手机端按住按钮上滑也能滚动页面（原来 none 会吞掉滚动）
+          style={{ touchAction: "pan-y" }}
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />

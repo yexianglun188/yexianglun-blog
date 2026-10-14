@@ -24,9 +24,9 @@ export default function HomeClient({
 }) {
   return (
     <div className="w-full max-w-6xl mx-auto py-6 md:py-12 px-4 sm:px-10 relative z-10">
-      {/* 搜索栏 */}
+      {/* 搜索栏 —— 移动端也要显示（外层原本写死 hidden md:block，手机上直接没了） */}
       <FadeIn>
-        <div className="hidden md:block">
+        <div className="w-full">
           <SearchBar />
         </div>
       </FadeIn>

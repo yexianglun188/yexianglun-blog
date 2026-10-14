@@ -9,6 +9,11 @@ out/
 build/
 !Kirameku-backend/admin/build/
 dist/
+# 打包/构建时留下的旧产物备份（NEXT_DIST_DIR / dist_old_* / .trash-backup 之类）
+.next*/
+Kirameku-backend/admin/dist_old_*/
+.trash-backup/
+**/.trash-backup/
 
 # 环境变量
 .env

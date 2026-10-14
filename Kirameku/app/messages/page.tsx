@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import Image from "next/image";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Newspaper,
@@ -13,27 +12,20 @@ import {
   Reply,
   ChevronDown,
   ChevronUp,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 
-function GithubIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-    >
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-    </svg>
-  );
-}
 import {
   getMessages,
   createMessage,
   likeMessage,
-  getGithubUser,
   type MessageItem,
 } from "@/app/api/messages";
-import type { GitHubUser } from "@/app/api/types";
+import { displayName as authorName, avatarOf } from "@/app/api/types";
+import { useAuth } from "@/components/providers/AuthProvider";
+import UserAvatar from "@/components/ui/UserAvatar";
+import MessageDanmaku from "@/components/messages/MessageDanmaku";
 
 // 递归展平嵌套回复，附带"回复谁"信息
 function flattenReplies(
@@ -46,7 +38,7 @@ function flattenReplies(
     const replyToUser = map.get(r.parent_id!);
     result.push(replyToUser ? { ...r, replyToUser } : r);
     if (r.replies?.length) {
-      map.set(r.id, r.github_user?.login ?? "匿名用户");
+      map.set(r.id, authorName(r));
       result.push(...flattenReplies(r.replies, map));
     }
   }
@@ -71,23 +63,10 @@ function relativeTime(dateStr: string): string {
 }
 
 export default function MessagesPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { user, token, ready, canComment, logout } = useAuth();
 
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<GitHubUser | null>(() => {
-    if (typeof window === "undefined") return null;
-    const saved = localStorage.getItem("github_user");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
   const [inputValue, setInputValue] = useState("");
   const [replyTo, setReplyTo] = useState<MessageItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -101,43 +80,12 @@ export default function MessagesPage() {
   );
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // 处理 GitHub 登录回调
-  useEffect(() => {
-    const token = searchParams.get("token");
-    if (token) {
-      localStorage.setItem("github_token", token);
-      getGithubUser(token).then((u) => {
-        setUser(u);
-        localStorage.setItem("github_user", JSON.stringify(u));
-      });
-      // 清除 URL 中的 token
-      router.replace("/messages");
-    } else {
-      // 验证已有 token 是否还有效
-      const savedToken = localStorage.getItem("github_token");
-      if (savedToken) {
-        getGithubUser(savedToken)
-          .then((u) => {
-            setUser(u);
-            localStorage.setItem("github_user", JSON.stringify(u));
-          })
-          .catch(() => {
-            localStorage.removeItem("github_token");
-            localStorage.removeItem("github_user");
-            setUser(null);
-          });
-      }
-    }
-  }, [searchParams, router]);
-
   // 加载留言
   useEffect(() => {
     let active = true;
     async function load() {
       try {
-        const [data] = await Promise.all([
-          getMessages({ page: 1, size: 50 }),
-        ]);
+        const data = await getMessages({ page: 1, size: 50 });
         if (!active) return;
         setMessages(data);
       } finally {
@@ -150,27 +98,20 @@ export default function MessagesPage() {
     };
   }, []);
 
-  function handleLogin() {
-    window.location.href = "/api/auth/github/login";
-  }
-
-  function handleLogout() {
-    localStorage.removeItem("github_token");
-    localStorage.removeItem("github_user");
-    setUser(null);
-  }
-
   async function handleSubmit() {
     if (!inputValue.trim() || submitting) return;
+    if (!canComment) return;
     setSubmitting(true);
     try {
-      const newMsg = await createMessage({
-        content: inputValue.trim(),
-        parent_id: replyTo?.id,
-      });
+      const newMsg = await createMessage(
+        {
+          content: inputValue.trim(),
+          parent_id: replyTo?.id,
+        },
+        token
+      );
       if (replyTo) {
         // 回复：找到顶层父留言，添加到其 replies
-        // 递归查找包含 targetId 的顶层留言
         function findTopLevelId(msgs: MessageItem[], targetId: number): number | null {
           for (const m of msgs) {
             if (m.id === targetId) return m.id;
@@ -254,6 +195,16 @@ export default function MessagesPage() {
     setInputValue("");
   }
 
+  const placeholder = !ready
+    ? "加载中..."
+    : !user
+      ? "登录后即可留言..."
+      : user.isGuest
+        ? "访客不能留言，注册账号后即可发言"
+        : replyTo
+          ? "写下你的回复..."
+          : "说点什么吧...";
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 md:py-12">
       {/* 页头 */}
@@ -270,39 +221,54 @@ export default function MessagesPage() {
           </h1>
         </div>
         <p className="text-sm md:text-base text-slate-600 dark:text-slate-300 ml-7 md:ml-10">
-          登录 GitHub，留下你的足迹
+          注册账号，留下你的足迹
         </p>
       </motion.div>
 
-      {/* 登录/用户信息 */}
+      {/* 留言弹幕 */}
+      <MessageDanmaku messages={messages} />
+
+      {/* 登录 / 用户信息 */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
         className="mb-4 md:mb-8"
       >
-        {user ? (
+        {!ready ? (
+          <div className="h-14 rounded-2xl bg-white/50 dark:bg-slate-800/60 animate-pulse" />
+        ) : user ? (
           <div className="flex items-center gap-2 md:gap-3 px-3 py-2 md:px-5 md:py-3 rounded-2xl bg-white/50 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10">
-            <Image
-              src={user.avatar}
-              alt={user.login}
-              width={32}
-              height={32}
-              className="rounded-full md:w-9 md:h-9"
-            />
+            <UserAvatar user={user} size={32} className="md:w-9 md:h-9" />
             <div className="flex-1 min-w-0">
-              <span className="text-xs md:text-sm font-semibold text-slate-800 dark:text-slate-200">
-                {user.login}
-              </span>
-              {user.bio && (
-                <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {user.bio}
-                </p>
-              )}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs md:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                  {user.nickname}
+                </span>
+                {user.isGuest && (
+                  <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                    访客
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 truncate">
+                {user.isGuest
+                  ? "访客可以浏览，但不能留言"
+                  : `@${user.username}`}
+              </p>
             </div>
+            {user.isGuest && (
+              <Link
+                href="/login?tab=register&redirect=/messages"
+                className="flex items-center gap-1 text-[10px] md:text-xs text-sky-600 dark:text-sky-400 hover:underline px-1.5 md:px-2 py-0.5 md:py-1"
+              >
+                <UserPlus className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                注册
+              </Link>
+            )}
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={logout}
               className="flex items-center gap-1 md:gap-1.5 text-[10px] md:text-xs text-slate-400 hover:text-red-500 transition-colors px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
             >
               <LogOut className="w-3 h-3 md:w-3.5 md:h-3.5" />
@@ -310,26 +276,24 @@ export default function MessagesPage() {
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={handleLogin}
-            className="flex items-center gap-2 md:gap-3 px-3 py-2 md:px-5 md:py-3 rounded-2xl bg-white/50 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10 hover:border-slate-300 dark:hover:border-slate-600 transition-all group w-full"
+          <Link
+            href="/login?redirect=/messages"
+            className="flex items-center gap-2 md:gap-3 px-3 py-2 md:px-5 md:py-3 rounded-2xl bg-white/50 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10 hover:border-sky-400/50 transition-all group w-full"
           >
-            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-slate-900 dark:bg-white flex items-center justify-center">
-              <GithubIcon className="w-4 h-4 md:w-5 md:h-5 text-white dark:text-slate-900" />
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center">
+              <LogIn className="w-4 h-4 md:w-5 md:h-5 text-white" />
             </div>
-            <div className="text-left">
+            <div className="text-left flex-1">
               <div className="text-xs md:text-sm font-semibold text-slate-800 dark:text-slate-200 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                登录 GitHub
+                登录 / 注册
               </div>
               <div className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400">
-                登录后即可留言和回复
+                登录后即可留言和回复，也可以「以访客身份浏览」
               </div>
             </div>
-          </button>
+          </Link>
         )}
       </motion.div>
-
 
       {/* 输入框 */}
       <motion.div
@@ -339,6 +303,20 @@ export default function MessagesPage() {
         className="mb-5 md:mb-10"
       >
         <div className="rounded-2xl bg-white/50 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10 overflow-hidden">
+          {/* 访客提示 */}
+          {ready && user?.isGuest && (
+            <div className="px-3 py-2 md:px-5 md:py-2.5 text-[11px] md:text-xs bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-b border-amber-200/50 dark:border-amber-500/20">
+              你当前是访客身份，只能浏览留言。
+              <Link
+                href="/login?tab=register&redirect=/messages"
+                className="underline font-medium ml-1"
+              >
+                注册账号
+              </Link>{" "}
+              后即可留言。
+            </div>
+          )}
+
           {/* 回复提示 */}
           <AnimatePresence>
             {replyTo && (
@@ -353,7 +331,7 @@ export default function MessagesPage() {
                   <span>
                     回复{" "}
                     <span className="font-medium text-sky-600 dark:text-sky-400">
-                      {replyTo.github_user?.login ?? "匿名"}
+                      {authorName(replyTo)}
                     </span>
                   </span>
                   <span className="truncate flex-1 opacity-60">
@@ -376,14 +354,8 @@ export default function MessagesPage() {
               ref={inputRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder={
-                user
-                  ? replyTo
-                    ? "写下你的回复..."
-                    : "说点什么吧..."
-                  : "登录后即可留言..."
-              }
-              disabled={!user}
+              placeholder={placeholder}
+              disabled={!canComment}
               rows={3}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -394,12 +366,12 @@ export default function MessagesPage() {
             />
             <div className="flex items-center justify-between mt-2 pt-2 md:mt-3 md:pt-3 border-t border-slate-200/50 dark:border-white/5">
               <span className="text-[10px] md:text-xs text-slate-400">
-                {"Ctrl + Enter 发送"}
+                {canComment ? "Ctrl + Enter 发送" : "登录后才能发送"}
               </span>
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!user || !inputValue.trim() || submitting}
+                disabled={!canComment || !inputValue.trim() || submitting}
                 className="flex items-center gap-1 md:gap-1.5 px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-sky-500 text-white text-[10px] md:text-xs font-medium hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 <Send className="w-3 h-3 md:w-3.5 md:h-3.5" />
@@ -470,26 +442,25 @@ function MessageCard({
       <div className="p-3 md:p-5">
         {/* 用户信息 */}
         <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-          {msg.github_user ? (
-            <Image
-              src={msg.github_user.avatar}
-              alt={msg.github_user.login}
-              width={32}
-              height={32}
-              className="rounded-full md:w-9 md:h-9"
-            />
-          ) : (
-            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700 flex items-center justify-center text-white text-xs md:text-sm font-bold">
-              ?
-            </div>
-          )}
+          <UserAvatar
+            user={avatarOf(msg)}
+            size={32}
+            className="md:w-9 md:h-9"
+          />
           <div className="flex-1 min-w-0">
-            <span className="text-xs md:text-sm font-semibold text-slate-800 dark:text-slate-200">
-              {msg.github_user?.login ?? "匿名用户"}
-            </span>
-            {msg.github_user?.bio && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs md:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                {authorName(msg)}
+              </span>
+              {msg.user?.is_guest && (
+                <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                  访客
+                </span>
+              )}
+            </div>
+            {(msg.user?.nickname || msg.github_user?.bio) && (
               <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 truncate">
-                {msg.github_user.bio}
+                {msg.github_user?.bio || `@${msg.user?.username}`}
               </p>
             )}
           </div>
@@ -592,23 +563,15 @@ function ReplyCard({
   return (
     <div className="px-3 py-2 md:px-5 md:py-3 border-b border-slate-200/30 dark:border-white/5 last:border-0">
       <div className="flex items-start gap-2 md:gap-3">
-        {reply.github_user ? (
-          <Image
-            src={reply.github_user.avatar}
-            alt={reply.github_user.login}
-            width={24}
-            height={24}
-            className="rounded-full mt-0.5 md:w-7 md:h-7"
-          />
-        ) : (
-          <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700 flex items-center justify-center text-white text-[10px] md:text-xs font-bold mt-0.5">
-            ?
-          </div>
-        )}
+        <UserAvatar
+          user={avatarOf(reply)}
+          size={24}
+          className="mt-0.5 md:w-7 md:h-7"
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
             <span className="text-[10px] md:text-xs font-semibold text-slate-700 dark:text-slate-300">
-              {reply.github_user?.login ?? "匿名用户"}
+              {authorName(reply)}
             </span>
             <span className="text-[10px] md:text-xs text-slate-400">
               {relativeTime(reply.created_at)}

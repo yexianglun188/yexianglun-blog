@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMusic } from "@/components/providers/MusicProvider";
+import CoverImg from "@/components/music/CoverImg";
 
 const formatTime = (time: number) => {
   if (!time || isNaN(time)) return "00:00";
@@ -118,7 +119,7 @@ export default function CloudPlayer() {
             className="w-14 h-14 md:w-20 md:h-20 rounded-full border-2 border-white/50 shadow-lg flex-shrink-0 overflow-hidden relative"
             style={{ animation: isPlaying ? "spin 6s linear infinite" : "none" }}
           >
-            <img src={currentSong.cover} alt="cover" className="w-full h-full object-cover" />
+            <CoverImg src={currentSong.cover} alt="cover" className="w-full h-full" />
             <div className="absolute inset-0 bg-black/10" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 bg-white/80 backdrop-blur-sm rounded-full border border-gray-300 shadow-inner" />
           </div>

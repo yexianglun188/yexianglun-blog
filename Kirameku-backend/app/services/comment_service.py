@@ -1,12 +1,13 @@
 from sqlmodel import Session, select
 from fastapi import HTTPException
 
-from app.models import Comment, GitHubUser
+from app.models import Comment, GitHubUser, User
 from app.schemas import CommentCreate
 
 
 def _comment_to_dict(session: Session, c: Comment, include_ip: bool = False, fetch_replies: bool = False) -> dict:
     gh_user = session.get(GitHubUser, c.github_user_id) if c.github_user_id else None
+    local_user = session.get(User, c.user_id) if c.user_id else None
     d = {
         "id": c.id,
         "post_id": c.post_id,
@@ -15,6 +16,14 @@ def _comment_to_dict(session: Session, c: Comment, include_ip: bool = False, fet
         "likes": c.likes,
         "status": c.status,
         "created_at": c.created_at,
+        "user_id": c.user_id,
+        "user": {
+            "id": local_user.id,
+            "username": local_user.username,
+            "nickname": local_user.nickname or local_user.username,
+            "avatar": local_user.avatar or "",
+            "is_guest": local_user.is_guest,
+        } if local_user else None,
         "github_user": {
             "id": gh_user.id,
             "login": gh_user.login,
@@ -79,10 +88,13 @@ def create_comment(
     session: Session,
     data: CommentCreate,
     github_user: GitHubUser | None = None,
+    local_user: User | None = None,
     ip: str = "",
 ) -> dict:
-    if not github_user:
-        raise HTTPException(401, "请先登录 GitHub")
+    if not github_user and not local_user:
+        raise HTTPException(401, "请先登录后再评论")
+    if local_user and local_user.is_guest:
+        raise HTTPException(403, "访客身份不能评论，请注册账号")
 
     if data.parent_id:
         parent = session.get(Comment, data.parent_id)
@@ -92,7 +104,8 @@ def create_comment(
     comment = Comment(
         post_id=data.post_id,
         parent_id=data.parent_id,
-        github_user_id=github_user.id,
+        github_user_id=github_user.id if github_user else None,
+        user_id=local_user.id if local_user else None,
         content=data.content,
         ip=ip,
     )

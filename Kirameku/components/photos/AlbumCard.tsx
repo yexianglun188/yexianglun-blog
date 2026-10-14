@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import PhotoCard from "./PhotoCard";
-import type { Photo } from "@/data/photos";
+import type { Photo } from "@/app/api/albums";
 
 export interface Album {
   id: number;

@@ -58,6 +58,7 @@ import {
 import { getPostBySlug, likePost, type PostDetail } from "@/app/api";
 import ReadingProgress from "@/components/ui/ReadingProgress";
 import PostComments from "@/components/posts/PostComments";
+import TableOfContents from "@/components/posts/TableOfContents";
 
 export default function PostDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -163,6 +164,8 @@ export default function PostDetailPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
       <ReadingProgress contentRef={contentRef} />
+      {/* 桌面端右侧悬浮目录（xl 以上显示） */}
+      {post && <TableOfContents content={post.content} containerRef={contentRef} />}
       {/* 返回按钮 */}
       <motion.div
         initial={{ opacity: 0, x: -10 }}

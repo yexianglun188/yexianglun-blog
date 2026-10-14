@@ -3,7 +3,6 @@
 from fastapi import APIRouter
 
 from app.api.auth import router as auth_router
-from app.api.github_auth import router as github_auth_router
 from app.api.posts import router as posts_router
 from app.api.categories import router as categories_router
 from app.api.tags import router as tags_router
@@ -18,11 +17,17 @@ from app.api.upload import router as upload_router
 from app.api.bookmarks import router as bookmarks_router
 from app.api.visitors import router as visitors_router
 from app.api.dashboard import router as dashboard_router
+from app.api.music_admin import router as music_admin_router
+from app.api.music import router as music_router
+from app.api.novel import router as novel_router
+from app.api.dog_diary import router as dog_diary_router
+from app.api.users_admin import router as users_admin_router
+from app.api.notifications import router as notifications_router
+from app.api.douban import router as douban_router
 
 api_router = APIRouter()
 
 api_router.include_router(auth_router)
-api_router.include_router(github_auth_router)
 api_router.include_router(posts_router)
 api_router.include_router(categories_router)
 api_router.include_router(tags_router)
@@ -37,3 +42,10 @@ api_router.include_router(upload_router)
 api_router.include_router(bookmarks_router)
 api_router.include_router(visitors_router)
 api_router.include_router(dashboard_router)
+api_router.include_router(music_admin_router)
+api_router.include_router(music_router)
+api_router.include_router(novel_router)
+api_router.include_router(dog_diary_router)
+api_router.include_router(users_admin_router)
+api_router.include_router(notifications_router)
+api_router.include_router(douban_router)

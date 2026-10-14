@@ -5,15 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 import SettingsPanel from "@/components/ui/SettingsPanel";
+import UserAvatar from "@/components/ui/UserAvatar";
+import NotificationBell from "@/components/layout/NotificationBell";
 import {
   Home,
   BookOpen,
   MessageSquare,
   Newspaper,
   FolderGit2,
-  Users,
   Camera,
   Clock,
   Music,
@@ -25,6 +27,9 @@ import {
   Settings,
   Library,
   Bookmark,
+  LogOut,
+  UserPlus,
+  Wrench,
 } from "lucide-react";
 
 const navLinks = [
@@ -35,7 +40,7 @@ const navLinks = [
   { href: "/novel", label: "小说", icon: Library },
   { href: "/bookmark", label: "收藏夹", icon: Bookmark },
   { href: "/projects", label: "项目", icon: FolderGit2 },
-  { href: "/friends", label: "友链", icon: Users },
+  { href: "/tools", label: "工具箱", icon: Wrench },
   { href: "/photowall", label: "照片墙", icon: Camera },
   { href: "/timeline", label: "归档", icon: Clock },
   { href: "/music", label: "音乐", icon: Music },
@@ -50,6 +55,10 @@ export default function Navbar() {
   const settingsRef = useRef<HTMLDivElement>(null);
   const [easterEgg, setEasterEgg] = useState(false);
   const clickTimes = useRef<number[]>([]);
+
+  const { user, logout } = useAuth();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const handleLogoClick = useCallback(() => {
     const now = Date.now();
@@ -151,7 +160,7 @@ export default function Navbar() {
         msg.innerHTML = `
           <div style="font-size:48px;margin-bottom:12px">🎉</div>
           <div style="font-size:24px;font-weight:bold;margin-bottom:8px">恭喜你发现了彩蛋！</div>
-          <div style="font-size:14px;opacity:0.8">连续点击 Logo 7 次触发 · Starhiro の小站</div>
+          <div style="font-size:14px;opacity:0.8">连续点击 Logo 7 次触发 · yexianglun小站</div>
         `;
         msg.style.cssText = `
           position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -181,10 +190,18 @@ export default function Navbar() {
       if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
         setIsSettingsOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // 退出登录后收起菜单
+  useEffect(() => {
+    if (!user) setIsUserMenuOpen(false);
+  }, [user]);
 
   // 子站页面隐藏主站导航栏
   if (pathname.startsWith("/garden")) return null;
@@ -202,7 +219,7 @@ export default function Navbar() {
               style={easterEgg ? { animation: "spin 0.5s ease-in-out 6, rainbow 3s linear" } : undefined}
             >
               <span className={`text-xl font-bold tracking-tight ${easterEgg ? "text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500" : "text-slate-800 dark:text-white"}`} style={{ fontFamily: "'Noto Serif SC', serif" }}>
-                Starhiro
+                yexianglun
               </span>
               <span className={`text-xl font-bold ${easterEgg ? "text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500" : "text-sky-500 dark:text-sky-400"}`} style={{ fontFamily: "serif" }}>
                 の
@@ -244,8 +261,75 @@ export default function Navbar() {
               })}
             </div>
 
-            {/* Theme Toggle, Settings & Mobile Menu */}
+            {/* Theme Toggle, Account, Settings & Mobile Menu */}
             <div className="flex items-center gap-2">
+              {/* 通知铃铛：仅注册用户显示（访客无回复） */}
+              <NotificationBell />
+              {/* 账号入口：仅登录后才显示；未登录时导航栏不出现任何账号相关元素 */}
+              {user && (
+                  <div className="relative" ref={userMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                      title={user.isGuest ? "访客" : user.nickname}
+                      className="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-xl hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors"
+                    >
+                      <UserAvatar user={user} size={26} />
+                      <span className="hidden lg:inline text-xs font-medium text-slate-700 dark:text-slate-200 max-w-[84px] truncate">
+                        {user.nickname}
+                      </span>
+                      {user.isGuest && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                          访客
+                        </span>
+                      )}
+                    </button>
+                    <AnimatePresence>
+                      {isUserMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                          transition={{ duration: 0.18 }}
+                          className="absolute right-0 mt-2 w-44 glass-card p-2 z-50"
+                        >
+                          <div className="px-2 py-1.5 mb-1 border-b border-slate-200/50 dark:border-white/10">
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">
+                              {user.nickname}
+                            </p>
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {user.isGuest
+                                ? "访客 · 不能留言"
+                                : `@${user.username}`}
+                            </p>
+                          </div>
+                          {user.isGuest && (
+                            <Link
+                              href="/login?tab=register"
+                              onClick={() => setIsUserMenuOpen(false)}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"
+                            >
+                              <UserPlus className="w-3.5 h-3.5" />
+                              注册正式账号
+                            </Link>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              logout();
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-300 hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                          >
+                            <LogOut className="w-3.5 h-3.5" />
+                            退出登录
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+              )}
+
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors"
@@ -323,6 +407,45 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+
+              {/* 账号：仅登录后才显示 */}
+              {user && (
+                <div className="mt-2 pt-2 border-t border-slate-200/50 dark:border-white/10">
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <UserAvatar user={user} size={36} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
+                          {user.nickname}
+                        </p>
+                        <p className="text-xs text-slate-400 truncate">
+                          {user.isGuest
+                            ? "访客 · 不能留言"
+                            : `@${user.username}`}
+                        </p>
+                      </div>
+                      {user.isGuest && (
+                        <Link
+                          href="/login?tab=register"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="shrink-0 px-2 py-1 text-xs rounded-lg text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"
+                        >
+                          注册
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          logout();
+                        }}
+                        className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        退出
+                      </button>
+                    </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

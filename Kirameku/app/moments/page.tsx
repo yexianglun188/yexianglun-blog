@@ -1,21 +1,24 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, Heart, ChevronLeft, Send, Reply, LogOut,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, LogIn, UserPlus,
 } from "lucide-react";
 import Lightbox from "@/components/photos/Lightbox";
+import ChatterComposer from "@/components/moments/ChatterComposer";
 import {
   getChatters, getChatterComments, createChatterComment, likeChatter,
   likeChatterComment,
   type ChatterItem, type ChatterCommentItem,
 } from "@/app/api";
-import { getGithubUser } from "@/app/api/messages";
-import type { GitHubUser } from "@/app/api/types";
+import { displayName, avatarOf } from "@/app/api/types";
+import { useAuth } from "@/components/providers/AuthProvider";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { siteConfig } from "@/siteConfig";
 
 interface Moment {
@@ -33,14 +36,6 @@ interface Photo {
   url: string;
   caption: string;
   orientation: "landscape" | "portrait";
-}
-
-function GithubIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-    </svg>
-  );
 }
 
 const rotations = [-2, 1.5, -1, 2, -1.5, 1, -0.5, 1.5];
@@ -75,7 +70,7 @@ function flattenReplies(
     const replyToUser = map.get(r.parent_id!);
     result.push(replyToUser ? { ...r, replyToUser } : r);
     if (r.replies?.length) {
-      map.set(r.id, r.github_user?.login ?? "匿名用户");
+      map.set(r.id, displayName(r));
       result.push(...flattenReplies(r.replies, map));
     }
   }
@@ -87,6 +82,8 @@ export default function MomentsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const loginRedirect = pathname || "/";
   const [onlyViewId, setOnlyViewId] = useState<string | null>(() => searchParams.get("onlyView"));
   const [likedIds, setLikedIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -99,12 +96,7 @@ export default function MomentsPage() {
   } | null>(null);
 
   // 评论相关
-  const [user, setUser] = useState<GitHubUser | null>(() => {
-    if (typeof window === "undefined") return null;
-    const saved = localStorage.getItem("github_user");
-    if (saved) { try { return JSON.parse(saved); } catch { return null; } }
-    return null;
-  });
+  const { user, token, ready, canComment, logout } = useAuth();
   const [commentInput, setCommentInput] = useState("");
   const [replyTo, setReplyTo] = useState<ChatterCommentItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -117,16 +109,6 @@ export default function MomentsPage() {
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  // 恢复 GitHub 登录状态
-  useEffect(() => {
-    const savedToken = localStorage.getItem("github_token");
-    if (savedToken && !user) {
-      getGithubUser(savedToken)
-        .then((u) => { setUser(u); localStorage.setItem("github_user", JSON.stringify(u)); })
-        .catch(() => { localStorage.removeItem("github_token"); localStorage.removeItem("github_user"); });
-    }
-  }, []);
 
   // "只看这条" 时加载评论
   useEffect(() => {
@@ -193,8 +175,6 @@ export default function MomentsPage() {
     } catch {}
   }
 
-  function handleLogin() { sessionStorage.setItem("github_redirect", window.location.pathname); window.location.href = "/api/auth/github/login"; }
-  function handleLogout() { localStorage.removeItem("github_token"); localStorage.removeItem("github_user"); setUser(null); }
   function cancelReply() { setReplyTo(null); setCommentInput(""); }
 
   async function handleCommentLike(commentId: number) {
@@ -238,10 +218,13 @@ export default function MomentsPage() {
   }
 
   async function handleSubmitComment(chatterId: number) {
-    if (!commentInput.trim() || submitting || !user) return;
+    if (!commentInput.trim() || submitting || !canComment) return;
     setSubmitting(true);
     try {
-      const nc = await createChatterComment({ chatter_id: chatterId, content: commentInput.trim(), parent_id: replyTo?.id });
+      const nc = await createChatterComment(
+        { chatter_id: chatterId, content: commentInput.trim(), parent_id: replyTo?.id },
+        token
+      );
       const sid = String(chatterId);
       if (replyTo) {
         const pid = findTopLevelId(commentsMap[sid] ?? [], replyTo.id) ?? replyTo.id;
@@ -282,6 +265,9 @@ export default function MomentsPage() {
         </div>
         <p className="text-sm md:text-base text-slate-600 dark:text-slate-300 ml-7 md:ml-10">记录生活中的小确幸</p>
       </motion.div>
+
+      {/* 站长写说说入口（需登录，后端强制鉴权） */}
+      <ChatterComposer />
 
       {onlyViewId && (
         <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} type="button" onClick={() => setOnlyViewId(null)}
@@ -381,23 +367,38 @@ export default function MomentsPage() {
                         {onlyViewId && (<>
                           {/* ---- 评论区 ---- */}
                           <div className="border-t border-slate-200/50 dark:border-white/5 px-3 md:px-5 py-3 md:py-4" onClick={(e) => e.stopPropagation()}>
-                            {user ? (
+                            {!ready ? (
+                              <div className="h-9 mb-3 rounded-xl bg-white/40 dark:bg-slate-700/30 animate-pulse" />
+                            ) : user ? (
                               <div className="flex items-center gap-2 mb-3 px-2 py-1.5 rounded-xl bg-white/40 dark:bg-slate-700/30">
-                                <Image src={user.avatar} alt={user.login} width={24} height={24} className="rounded-full md:w-7 md:h-7" />
-                                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 flex-1">{user.login}</span>
-                                <button type="button" onClick={handleLogout}
+                                <UserAvatar user={user} size={24} className="md:w-7 md:h-7" />
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 flex-1 truncate">
+                                  {user.nickname}
+                                  {user.isGuest && (
+                                    <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400">访客</span>
+                                  )}
+                                </span>
+                                {user.isGuest && (
+                                  <Link href={`/login?tab=register&redirect=${encodeURIComponent(loginRedirect)}`}
+                                    className="flex items-center gap-1 text-[10px] text-sky-600 dark:text-sky-400 hover:underline">
+                                    <UserPlus className="w-3 h-3" />注册
+                                  </Link>
+                                )}
+                                <button type="button" onClick={logout}
                                   className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-red-500 transition-colors">
                                   <LogOut className="w-3 h-3" />退出
                                 </button>
                               </div>
                             ) : (
-                              <button type="button" onClick={handleLogin}
-                                className="flex items-center gap-2 mb-3 w-full px-2 py-1.5 rounded-xl bg-white/40 dark:bg-slate-700/30 hover:bg-white/60 dark:hover:bg-slate-700/50 transition-all">
-                                <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-slate-900 dark:bg-white flex items-center justify-center">
-                                  <GithubIcon className="w-3.5 h-3.5 md:w-4 md:h-4 text-white dark:text-slate-900" />
+                              <Link href={`/login?redirect=${encodeURIComponent(loginRedirect)}`}
+                                className="flex items-center gap-2 mb-3 w-full px-2 py-1.5 rounded-xl bg-white/40 dark:bg-slate-700/30 hover:bg-white/60 dark:hover:bg-slate-700/50 transition-all group">
+                                <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center">
+                                  <LogIn className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
                                 </div>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">登录 GitHub 参与讨论</span>
-                              </button>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                                  登录 / 注册后参与讨论
+                                </span>
+                              </Link>
                             )}
 
                             {/* 输入框 */}
@@ -407,7 +408,7 @@ export default function MomentsPage() {
                                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                                     <div className="flex items-center gap-1.5 px-2 pt-2 pb-0 text-[10px] text-slate-500 dark:text-slate-400">
                                       <Reply className="w-3 h-3" />
-                                      <span>回复 <span className="font-medium text-sky-600 dark:text-sky-400">{replyTo.github_user?.login ?? "匿名"}</span></span>
+                                      <span>回复 <span className="font-medium text-sky-600 dark:text-sky-400">{displayName(replyTo)}</span></span>
                                       <span className="truncate flex-1 opacity-60 ml-1">{replyTo.content.slice(0, 40)}</span>
                                       <button type="button" onClick={cancelReply} className="text-slate-400 hover:text-red-500 transition-colors shrink-0">✕</button>
                                     </div>
@@ -416,13 +417,18 @@ export default function MomentsPage() {
                               </AnimatePresence>
                               <div className="p-2">
                                 <textarea ref={inputRef} value={commentInput} onChange={(e) => setCommentInput(e.target.value)}
-                                  placeholder={user ? "说点什么..." : "登录后即可评论..."} disabled={!user} rows={2}
+                                  placeholder={
+                                    !ready ? "加载中..."
+                                      : !user ? "登录后即可评论..."
+                                        : user.isGuest ? "访客不能评论，注册账号后即可发言"
+                                          : "说点什么..."
+                                  } disabled={!canComment} rows={2}
                                   onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmitComment(parseInt(moment.id)); }}
                                   className="w-full bg-transparent text-xs text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none disabled:cursor-not-allowed disabled:opacity-50" />
                                 <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-200/30 dark:border-white/5">
                                   <span className="text-[10px] text-slate-400">{"Ctrl + Enter 发送"}</span>
                                   <button type="button" onClick={() => handleSubmitComment(parseInt(moment.id))}
-                                    disabled={!user || !commentInput.trim() || submitting}
+                                    disabled={!canComment || !commentInput.trim() || submitting}
                                     className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-500 text-white text-[10px] font-medium hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                                     <Send className="w-3 h-3" />{submitting ? "发送中..." : replyTo ? "回复" : "发送"}
                                   </button>
@@ -489,12 +495,8 @@ function CommentCard({ comment, expandedReplies, onReply, onToggleReplies, liked
     <div className="rounded-xl bg-white/40 dark:bg-slate-700/30 overflow-hidden">
       <div className="p-2 md:p-3">
         <div className="flex items-center gap-2 mb-1.5">
-          {comment.github_user ? (
-            <Image src={comment.github_user.avatar} alt={comment.github_user.login} width={22} height={22} className="rounded-full md:w-6 md:h-6" />
-          ) : (
-            <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700 flex items-center justify-center text-white text-[10px] font-bold">?</div>
-          )}
-          <span className="text-[10px] md:text-xs font-semibold text-slate-700 dark:text-slate-300">{comment.github_user?.login ?? "匿名用户"}</span>
+          <UserAvatar user={avatarOf(comment)} size={22} className="md:w-6 md:h-6" />
+          <span className="text-[10px] md:text-xs font-semibold text-slate-700 dark:text-slate-300">{displayName(comment)}</span>
           <span className="text-[10px] text-slate-400 ml-auto">{relativeTime(comment.created_at)}</span>
         </div>
         <p className="text-[10px] md:text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap mb-1.5 md:mb-2 ml-7 md:ml-8">{comment.content}</p>
@@ -534,14 +536,10 @@ function ReplyCard({ reply, onReply, likedCommentIds, onCommentLike }: {
   return (
     <div className="px-2 py-1.5 md:px-3 md:py-2 border-b border-slate-200/20 dark:border-white/5 last:border-0">
       <div className="flex items-start gap-1.5 md:gap-2">
-        {reply.github_user ? (
-          <Image src={reply.github_user.avatar} alt={reply.github_user.login} width={18} height={18} className="rounded-full mt-0.5 md:w-5 md:h-5" />
-        ) : (
-          <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700 flex items-center justify-center text-white text-[8px] font-bold mt-0.5">?</div>
-        )}
+        <UserAvatar user={avatarOf(reply)} size={18} className="mt-0.5 md:w-5 md:h-5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1 mb-0.5">
-            <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">{reply.github_user?.login ?? "匿名用户"}</span>
+            <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">{displayName(reply)}</span>
             <span className="text-[9px] text-slate-400">{relativeTime(reply.created_at)}</span>
           </div>
           <p className="text-[10px] text-slate-500 dark:text-slate-500 leading-relaxed whitespace-pre-wrap">

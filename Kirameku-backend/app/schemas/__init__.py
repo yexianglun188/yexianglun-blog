@@ -1,4 +1,4 @@
-from app.schemas.auth import Token, LoginRequest
+from app.schemas.auth import Token, LoginRequest, RegisterRequest
 from app.schemas.post import PostCreate, PostUpdate, PostOut, PostDetail
 from app.schemas.category import (
     CategoryCreate, CategoryUpdate, CategoryOut,
@@ -16,6 +16,7 @@ from app.schemas.album import AlbumCreate, AlbumUpdate, AlbumOut, PhotoCreate, P
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectOut
 from app.schemas.friend_link import FriendLinkCreate, FriendLinkUpdate, FriendLinkOut
 from app.schemas.site_config import SiteConfigUpdate, SiteConfigOut
+from app.schemas.diary import DogDiaryCreate, DogDiaryUpdate, DogDiaryOut
 from app.schemas.bookmark import (
     BookmarkCategoryCreate, BookmarkCategoryUpdate, BookmarkCategoryOut,
     BookmarkSiteCreate, BookmarkSiteUpdate, BookmarkSiteOut, BookmarkFull,
@@ -37,4 +38,5 @@ __all__ = [
     "SiteConfigUpdate", "SiteConfigOut",
     "BookmarkCategoryCreate", "BookmarkCategoryUpdate", "BookmarkCategoryOut",
     "BookmarkSiteCreate", "BookmarkSiteUpdate", "BookmarkSiteOut", "BookmarkFull",
+    "DogDiaryCreate", "DogDiaryUpdate", "DogDiaryOut",
 ]

@@ -24,6 +24,8 @@ class ChatterComment(SQLModel, table=True):
     chatter_id: int = Field(foreign_key="chatter.id", index=True)
     parent_id: Optional[int] = Field(default=None, foreign_key="chatter_comment.id")
     github_user_id: Optional[int] = Field(default=None, foreign_key="github_user.id")
+    # 本地账号作者（新账号体系）；github_user_id 保留仅作历史数据兼容
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
     content: str
     ip: str = Field(default="", max_length=45)
     likes: int = Field(default=0)

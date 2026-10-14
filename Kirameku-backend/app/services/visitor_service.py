@@ -1,7 +1,9 @@
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
-from sqlmodel import Session, select, col
+from sqlmodel import Session, select, col, delete, or_, and_, func
+from sqlalchemy import exists
+from sqlalchemy.orm import aliased
 from app.models.visitor import Visitor
 
 # 内存缓存 IP 地理位置，避免重复请求
@@ -144,6 +146,41 @@ def _get_org_cn(org: str, asn: str) -> str:
     return ""
 
 
+# 机器人 / 爬虫 User-Agent 关键词（小写匹配）
+_BOT_UA_KEYWORDS = (
+    "headlesschrome", "phantomjs", "selenium", "puppeteer", "playwright",
+    "crawler", "crawling", "spider", "scrapy", "scraper",
+    "googlebot", "bingbot", "baiduspider", "360spider", "sogou", "yandexbot",
+    "ahrefsbot", "semrushbot", "mj12bot", "dotbot", "petalbot", "applebot",
+    "bytespider", "duckduckbot", "slurp", "teoma", "ia_archiver",
+    "python-requests", "python-httpx", "python-urllib", "urllib", "httpie",
+    "axios/", "node-fetch", "got/", "undici", "libwww-perl",
+    "curl/", "wget/", "wget2", "faraday", "okhttp",
+    "scanner", "masscan", "nmap", "nikto", "sqlmap", "dirbuster", "gobuster",
+    "checker", "monitoring", "uptime", "pingdom", "gtmetrix", "lighthouse",
+)
+
+# 本机 / 内网 IP 前缀（自己的调试访问，不算真实访客来源）
+_PRIVATE_IP_PREFIXES = ("127.", "::1", "0.", "10.", "192.168.", "169.254.", "172.16.", "172.17.", "172.18.", "172.19.", "172.2", "172.3")
+
+
+def _is_local_ip(ip: str) -> bool:
+    """是否本机 / 内网 IP"""
+    if not ip:
+        return True
+    if ip in ("localhost", "unknown"):
+        return True
+    return ip.startswith(_PRIVATE_IP_PREFIXES)
+
+
+def _is_bot_ua(ua: str) -> bool:
+    """根据 User-Agent 判断是否为机器人 / 爬虫"""
+    if not ua:
+        return False
+    ua_lower = ua.lower()
+    return any(k in ua_lower for k in _BOT_UA_KEYWORDS)
+
+
 def _parse_ua(ua: str) -> dict:
     """简单的 User-Agent 解析"""
     browser = "Unknown"
@@ -275,20 +312,28 @@ def get_recent_visitors(
     session: Session,
     page: int = 1,
     size: int = 20,
+    only: str = "",  # human=只看真人 / bot=只看机器人 / 空=全部
 ) -> list[dict]:
-    """获取最近访客列表"""
-    q = (
-        select(Visitor)
-        .order_by(col(Visitor.created_at).desc())
-        .offset((page - 1) * size)
-        .limit(size)
-    )
-    rows = list(session.exec(q).all())
+    """获取最近访客列表（默认记录全部来源，机器人额外打标）"""
+    stmt = select(Visitor)
+
+    # 数据库层面过滤（保证翻页总数正确）
+    ua_conds = [col(Visitor.user_agent).ilike(f"%{k}%") for k in _BOT_UA_KEYWORDS]
+    if only == "bot":
+        stmt = stmt.where(or_(*ua_conds))
+    elif only == "human":
+        stmt = stmt.where(and_(*[~c for c in ua_conds]))
+
+    stmt = stmt.order_by(col(Visitor.created_at).desc()).offset((page - 1) * size).limit(size)
+    rows = list(session.exec(stmt).all())
     return [
         {
             "id": v.id,
             "ip": v.ip,
             "path": v.path,
+            "user_agent": v.user_agent,
+            "is_bot": _is_bot_ua(v.user_agent),
+            "is_local": _is_local_ip(v.ip),
             "city": v.city,
             "region": v.region,
             "country": v.country,
@@ -308,9 +353,15 @@ def get_recent_visitors(
     ]
 
 
-def get_visitor_count(session: Session) -> int:
-    """获取总访客数"""
-    return len(list(session.exec(select(Visitor)).all()))
+def get_visitor_count(session: Session, only: str = "") -> int:
+    """获取访客总数（可按 only=human/bot 过滤）"""
+    stmt = select(func.count(col(Visitor.id)))
+    ua_conds = [col(Visitor.user_agent).ilike(f"%{k}%") for k in _BOT_UA_KEYWORDS]
+    if only == "bot":
+        stmt = stmt.where(or_(*ua_conds))
+    elif only == "human":
+        stmt = stmt.where(and_(*[~c for c in ua_conds]))
+    return session.exec(stmt).one()
 
 
 def delete_visitor(session: Session, visitor_id: int):
@@ -319,6 +370,78 @@ def delete_visitor(session: Session, visitor_id: int):
     if visitor:
         session.delete(visitor)
         session.commit()
+
+
+def get_stats(session: Session) -> dict:
+    """统计各类访客记录数量，便于后台展示与清理"""
+    all_rows = session.exec(select(Visitor)).all()
+    total = len(all_rows)
+    bots = sum(1 for v in all_rows if _is_bot_ua(v.user_agent))
+    locals_ = sum(1 for v in all_rows if _is_local_ip(v.ip))
+
+    other = aliased(Visitor)
+    dup_stmt = select(func.count(col(Visitor.id))).where(
+        exists(
+            select(other.id).where(
+                other.ip == Visitor.ip,
+                other.path == Visitor.path,
+                other.id < Visitor.id,
+                other.created_at >= Visitor.created_at - timedelta(minutes=5),
+                other.created_at <= Visitor.created_at,
+            )
+        )
+    )
+    duplicates = session.exec(dup_stmt).one()
+
+    return {
+        "total": total,
+        "bot": bots,
+        "local": locals_,
+        "duplicate": duplicates,
+        "human": total - bots,
+    }
+
+
+def clean_records(session: Session, scope: str) -> int:
+    """按范围清理无效访客记录，返回删除条数
+
+    scope:
+      duplicate  - 同一 IP + 同一页面 5 分钟内的重复记录（保留最早一条）
+      local      - 本机/内网 IP 的访问（自己调试产生）
+      bot        - User-Agent 为机器人/爬虫的记录
+    """
+    if scope == "duplicate":
+        # 删除：存在另一条同 ip + 同页面、5 分钟内、id 更小的记录
+        other = aliased(Visitor)
+        dup_ids_stmt = select(Visitor.id).where(
+            exists(
+                select(other.id).where(
+                    other.ip == Visitor.ip,
+                    other.path == Visitor.path,
+                    other.id < Visitor.id,
+                    other.created_at >= Visitor.created_at - timedelta(minutes=5),
+                    other.created_at <= Visitor.created_at,
+                )
+            )
+        )
+        ids = list(session.exec(dup_ids_stmt).all())
+        if ids:
+            session.exec(delete(Visitor).where(col(Visitor.id).in_(ids)))  # type: ignore
+            session.commit()
+        return len(ids)
+
+    scan = session.exec(select(Visitor)).all()
+    if scope == "local":
+        rows = [v for v in scan if _is_local_ip(v.ip)]
+    elif scope == "bot":
+        rows = [v for v in scan if _is_bot_ua(v.user_agent)]
+    else:
+        return 0
+
+    for v in rows:
+        session.delete(v)
+    session.commit()
+    return len(rows)
 
 
 def clear_visitors(session: Session):

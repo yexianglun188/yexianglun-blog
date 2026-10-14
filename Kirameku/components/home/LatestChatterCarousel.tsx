@@ -130,7 +130,7 @@ export default function LatestChatterCarousel() {
 
   return (
     <div
-      className="w-full h-full rounded-3xl overflow-hidden relative min-h-[160px] md:min-h-[220px] select-none cursor-grab active:cursor-grabbing touch-none"
+      className="w-full h-full rounded-3xl overflow-hidden relative min-h-[160px] md:min-h-[220px] select-none cursor-grab active:cursor-grabbing touch-pan-y"
       onMouseDown={(e) => {
         e.preventDefault();
         handlePointerDown(e.clientX, e.clientY);
@@ -145,6 +145,8 @@ export default function LatestChatterCarousel() {
         handlePointerMove(e.touches[0].clientX, e.touches[0].clientY)
       }
       onTouchEnd={handlePointerUp}
+      // 浏览器接管纵向滚动时触发 touchcancel，复位拖拽状态
+      onTouchCancel={handlePointerUp}
       onClick={handleClick}
     >
       {[...items].reverse().map((item, reverseIdx) => {

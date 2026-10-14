@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useMusic } from "@/components/providers/MusicProvider";
+import { useMusic, type SearchTrack } from "@/components/providers/MusicProvider";
+import CoverImg from "@/components/music/CoverImg";
 
 const formatTime = (s: number) => {
   if (!s || isNaN(s)) return "0:00";
@@ -68,6 +69,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10M4 18h10" />
     </svg>
   ),
+  search: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  ),
 };
 
 const modeConfig: Record<string, { icon: React.ReactNode; label: string }> = {
@@ -90,12 +96,56 @@ export default function MusicPage() {
     playlist, currentIndex, currentSong, isPlaying, progress, currentTime, duration,
     currentLyric, allLyrics, isLoading, volume, isMuted, playMode,
     togglePlay, nextSong, prevSong, handleSeek, playSong,
-    setVolume, toggleMute, togglePlayMode,
+    setVolume, toggleMute, togglePlayMode, playSearchResult,
   } = useMusic();
 
   const lyricContainerRef = useRef<HTMLDivElement>(null);
   const activeLyricRef = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<"lyrics" | "playlist">("lyrics");
+  const [tab, setTab] = useState<"lyrics" | "playlist" | "search">("lyrics");
+
+  // ── 前台搜歌 ──
+  const [kw, setKw] = useState("");
+  const [searchPlatform, setSearchPlatform] = useState<"kuwo" | "netease">("kuwo");
+  const [results, setResults] = useState<SearchTrack[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchErr, setSearchErr] = useState("");
+  const [playingKey, setPlayingKey] = useState("");
+
+  const onSearch = async () => {
+    const key = kw.trim();
+    if (!key) return;
+    setSearching(true);
+    setSearchErr("");
+    try {
+      const res = await fetch(
+        `/api/music/search?key=${encodeURIComponent(key)}&platform=${searchPlatform}&limit=30`
+      );
+      const payload = await res.json();
+      if (payload?.isSuccess) {
+        setResults(payload.data || []);
+        if (!(payload.data || []).length) setSearchErr(`没有找到与「${key}」相关的歌曲`);
+      } else {
+        setSearchErr(payload?.detail || "搜索失败，请稍后重试");
+        setResults([]);
+      }
+    } catch {
+      setSearchErr("搜索失败，请检查网络");
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const onPlayResult = async (track: SearchTrack) => {
+    setPlayingKey(`${track.platform}:${track.id}`);
+    const ok = await playSearchResult(track);
+    if (!ok) {
+      setSearchErr(`《${track.name}》暂时无法播放（可能是版权限制），换一首试试`);
+    } else {
+      setSearchErr("");
+    }
+    setPlayingKey("");
+  };
 
   const activeLyricIndex = useMemo(() => {
     if (!allLyrics.length) return -1;
@@ -169,7 +219,7 @@ export default function MusicPage() {
                 className="w-[72px] h-[72px] md:w-24 md:h-24 rounded-full overflow-hidden shadow-inner"
                 style={{ animation: isPlaying ? "spin 8s linear infinite" : "none" }}
               >
-                <img src={currentSong.cover} alt="" className="w-full h-full object-cover" />
+                <CoverImg src={currentSong.cover} rounded="rounded-full" className="w-full h-full" />
               </div>
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white/80 shadow" />
             </div>
@@ -214,7 +264,7 @@ export default function MusicPage() {
                 className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30 hover:bg-indigo-600 hover:scale-105 transition-all">
                 {isPlaying ? Icons.pause : Icons.play}
               </button>
-              <button type="button" onClick={nextSong} title="下一首"
+              <button type="button" onClick={() => nextSong()} title="下一首"
                 className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-indigo-500 hover:bg-white/30 dark:hover:bg-slate-700/50 transition-colors">
                 {Icons.next}
               </button>
@@ -261,6 +311,14 @@ export default function MusicPage() {
               : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
           }`}>
           {Icons.playlist} 播放列表
+        </button>
+        <button type="button" onClick={() => setTab("search")}
+          className={`flex-1 py-2 md:py-2.5 rounded-lg md:rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1 md:gap-1.5 ${
+            tab === "search"
+              ? "bg-white/60 dark:bg-slate-700/70 text-indigo-600 dark:text-indigo-400 shadow-sm"
+              : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+          }`}>
+          {Icons.search} 搜歌
         </button>
       </div>
 
@@ -335,7 +393,7 @@ export default function MusicPage() {
                     </div>
                     {/* Cover */}
                     <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg overflow-hidden shrink-0 shadow-sm">
-                      <img src={song.cover} alt="" className="w-full h-full object-cover" />
+                      <CoverImg src={song.cover} rounded="rounded-lg" className="w-full h-full" />
                     </div>
                     {/* Info */}
                     <div className="flex-1 min-w-0">
@@ -350,9 +408,123 @@ export default function MusicPage() {
                         {isPlaying ? Icons.pause : Icons.play}
                       </div>
                     )}
+                    {/* 平台标记 */}
+                    <span className={`hidden md:inline text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                      song.platform === "qq"
+                        ? "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400"
+                        : song.platform === "local"
+                        ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400"
+                        : song.platform === "kuwo"
+                        ? "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400"
+                        : "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400"
+                    }`}>
+                      {song.platform === "qq" ? "QQ"
+                        : song.platform === "local" ? "本地"
+                        : song.platform === "kuwo" ? "酷我"
+                        : "网易云"}
+                    </span>
                   </button>
                 ))}
               </div>
+            </MusicCard>
+          </motion.div>
+        )}
+
+        {tab === "search" && (
+          <motion.div key="search" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+            <MusicCard>
+              {/* 搜索栏 */}
+              <div className="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
+                <div className="flex rounded-lg md:rounded-xl overflow-hidden border border-white/40 dark:border-white/10 shrink-0">
+{/* 酷我作为首选搜索源：它的索引没被版权方下架，周杰伦等原唱能直接搜到，
+                      且后端能拿到 320k mp3 直链（网易云的搜索索引把原唱过滤掉了）。 */}
+                      {(["kuwo", "netease"] as const).map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setSearchPlatform(val)}
+                          className={`px-3 py-2 text-[10px] md:text-xs font-bold transition-all ${
+                            searchPlatform === val
+                              ? "bg-indigo-500 text-white"
+                              : "text-gray-500 hover:bg-white/60 dark:hover:bg-white/5"
+                          }`}
+                        >
+                          {val === "kuwo" ? "酷我" : "网易云"}
+                        </button>
+                      ))}
+                </div>
+                <input
+                  type="text"
+                  value={kw}
+                  onChange={(e) => setKw(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && onSearch()}
+                  placeholder="输入歌名或歌手，回车搜索"
+                  className="flex-1 min-w-[140px] px-3 py-2 rounded-lg md:rounded-xl bg-white/50 dark:bg-slate-700/50 border border-white/40 dark:border-white/10 text-xs md:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-indigo-400"
+                />
+                <button
+                  type="button"
+                  onClick={onSearch}
+                  disabled={searching}
+                  className="px-4 py-2 rounded-lg md:rounded-xl bg-indigo-500 text-white text-xs md:text-sm font-bold hover:bg-indigo-600 disabled:opacity-50 transition-colors shrink-0"
+                >
+                  {searching ? "搜索中..." : "搜索"}
+                </button>
+              </div>
+
+              {searchPlatform === "netease" && (
+                <p className="text-[10px] md:text-xs text-amber-500 mb-3">
+                  网易云的搜索索引会把部分高版权歌曲的原唱过滤掉（搜「晴天」只出翻唱版），
+                  想要原唱建议切到「酷我」。若整首都取不到，请确认本地音乐服务（3301 端口）已启动。
+                </p>
+              )}
+
+              {searchErr && (
+                <p className="text-[10px] md:text-xs text-amber-500 mb-3">{searchErr}</p>
+              )}
+
+              {/* 搜索结果 */}
+              <div className="space-y-1">
+                {results.map((r) => {
+                  const key = `${r.platform}:${r.id}`;
+                  const inPlaylist = playlist.some((s) => s.platform === r.platform && s.songId === r.id);
+                  const isCurrent = currentSong?.platform === r.platform && currentSong?.songId === r.id;
+                  return (
+                    <div
+                      key={key}
+                      className={`w-full flex items-center gap-2 md:gap-3 px-2 py-2 md:px-3 md:py-3 rounded-lg md:rounded-xl transition-all ${
+                        isCurrent ? "bg-indigo-500/10 dark:bg-indigo-500/20" : "hover:bg-white/40 dark:hover:bg-slate-700/40"
+                      }`}
+                    >
+                      <CoverImg src={r.cover} rounded="rounded-lg" className="w-8 h-8 md:w-10 md:h-10 shrink-0 shadow-sm" />
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-xs md:text-sm font-bold truncate ${isCurrent ? "text-indigo-600 dark:text-indigo-300" : "text-slate-800 dark:text-slate-100"}`}>
+                          {r.name}
+                        </div>
+                        <div className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
+                          {r.artist}{r.album ? ` · ${r.album}` : ""}
+                        </div>
+                      </div>
+                      {r.duration && (
+                        <span className="hidden md:inline text-[10px] text-slate-400 tabular-nums shrink-0">{r.duration}</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onPlayResult(r)}
+                        disabled={playingKey === key}
+                        className="px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg bg-indigo-500 text-white text-[10px] md:text-xs font-bold hover:bg-indigo-600 disabled:opacity-50 transition-colors shrink-0"
+                      >
+                        {playingKey === key ? "..." : isCurrent && isPlaying ? "播放中" : inPlaylist ? "播放" : "播放"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {!searching && results.length === 0 && !searchErr && (
+                <div className="text-center py-10 text-slate-400 text-xs md:text-sm">
+                  搜到的歌会直接加入当前播放列表并播放，不会写进后台曲库
+                </div>
+              )}
             </MusicCard>
           </motion.div>
         )}

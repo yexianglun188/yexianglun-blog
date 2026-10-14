@@ -1,7 +1,7 @@
 from sqlmodel import Session, select
 from fastapi import HTTPException
 
-from app.models import Message, GitHubUser
+from app.models import Message, GitHubUser, User
 from app.schemas import MessageCreate
 
 
@@ -37,12 +37,14 @@ def get_message_count(session: Session, status: str | None = "approved") -> int:
 def create_message(
     session: Session,
     data: MessageCreate,
-    github_user: GitHubUser | None = None,
+    user: User | None = None,
     ip: str = "",
 ) -> dict:
-    """创建留言（需要 GitHub 登录）"""
-    if not github_user:
-        raise HTTPException(401, "请先登录 GitHub")
+    """创建留言（需要已登录的本地账号，访客身份禁止留言）"""
+    if not user:
+        raise HTTPException(401, "请先登录")
+    if user.is_guest:
+        raise HTTPException(403, "访客身份不能留言，请注册账号")
 
     # 如果是回复，检查父留言是否存在
     if data.parent_id:
@@ -51,7 +53,7 @@ def create_message(
             raise HTTPException(404, "被回复的留言不存在")
 
     msg = Message(
-        github_user_id=github_user.id,
+        user_id=user.id,
         parent_id=data.parent_id,
         content=data.content,
         ip=ip,
@@ -93,8 +95,9 @@ def toggle_like(session: Session, msg_id: int, unlike: bool = False) -> dict:
 
 
 def _message_to_dict(session: Session, msg: Message) -> dict:
-    """将 Message 转为带 github_user 和 replies 的字典"""
+    """将 Message 转为带作者（user / 兼容 github_user）和 replies 的字典"""
     gh_user = session.get(GitHubUser, msg.github_user_id) if msg.github_user_id else None
+    local_user = session.get(User, msg.user_id) if msg.user_id else None
 
     # 获取回复
     replies_q = (
@@ -108,12 +111,21 @@ def _message_to_dict(session: Session, msg: Message) -> dict:
     return {
         "id": msg.id,
         "github_user_id": msg.github_user_id,
+        "user_id": msg.user_id,
         "parent_id": msg.parent_id,
         "content": msg.content,
         "ip": msg.ip,
         "status": msg.status,
         "likes": msg.likes,
         "created_at": msg.created_at,
+        "user": {
+            "id": local_user.id,
+            "username": local_user.username,
+            "nickname": local_user.nickname or local_user.username,
+            "avatar": local_user.avatar or "",
+            "is_guest": local_user.is_guest,
+        } if local_user else None,
+        # 兼容历史数据：早期留言只有 github_user
         "github_user": {
             "id": gh_user.id,
             "login": gh_user.login,

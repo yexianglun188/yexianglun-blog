@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlmodel import Session
 
 from app.deps import get_session
 from app.schemas import CommentCreate, CommentOut, CommentAdminUpdate
 from app.services import comment_service
 from app.deps import get_current_user
-from app.api.github_auth import get_github_user_optional
+from app.api.identity import resolve_identity
 
 router = APIRouter(prefix="/api/comments", tags=["评论"])
 
@@ -23,13 +23,20 @@ def create_comment(
     request: Request,
     session: Session = Depends(get_session),
 ):
-    user = get_github_user_optional(request, session)
+    ident = resolve_identity(request, session)
+    if not ident.can_comment:
+        if ident.is_guest:
+            raise HTTPException(403, "访客身份不能评论，请注册账号")
+        raise HTTPException(401, "请先登录后再评论")
+
     ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
     if not ip:
         ip = request.headers.get("x-real-ip", "")
     if not ip:
         ip = request.client.host if request.client else ""
-    return comment_service.create_comment(session, data, user, ip)
+    return comment_service.create_comment(
+        session, data, ident.github_user, ident.user, ip
+    )
 
 
 # ---- 管理接口 ----

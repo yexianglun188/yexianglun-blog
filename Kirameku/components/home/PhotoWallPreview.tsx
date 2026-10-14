@@ -21,12 +21,16 @@ export default function PhotoWallPreview() {
   const isDragging = useRef(false);
 
   useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    const targetTitle = isMobile ? "2" : "1";
+    // 原实现硬编码查找标题为 "1" / "2" 的相册（作者本地测试数据），
+    // 导致自建相册永远匹配不上。改为：按 sort/id 降序取第一个有照片的相册。
     getAlbums()
       .then((albums) => {
-        const target = albums.find((a) => a.title === targetTitle);
-        if (!target) return;
+        if (!albums?.length) return [];
+        const sorted = [...albums].sort(
+          (a, b) => (b.sort ?? 0) - (a.sort ?? 0) || b.id - a.id
+        );
+        const target = sorted.find((a) => (a.photo_count ?? 0) > 0) ?? sorted[0];
+        if (!target) return [];
         return getAlbumPhotos(target.id);
       })
       .then((data) => {
@@ -119,10 +123,13 @@ export default function PhotoWallPreview() {
   return (
     <div
       onClick={handleClick}
-      className="rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl overflow-hidden relative group min-h-[240px] md:min-h-[420px] h-full flex flex-col select-none cursor-pointer touch-none"
+      className="rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl overflow-hidden relative group min-h-[240px] md:min-h-[420px] h-full flex flex-col select-none cursor-pointer touch-pan-y"
       onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
       onTouchMove={(e) => handlePointerMove(e.touches[0].clientX)}
       onTouchEnd={handlePointerUp}
+      // 浏览器接管纵向滚动时会触发 touchcancel，必须复位拖拽状态，
+      // 否则下一次点击会被误判成滑动而不跳转
+      onTouchCancel={handlePointerUp}
       onMouseDown={(e) => {
         e.preventDefault();
         handlePointerDown(e.clientX);
