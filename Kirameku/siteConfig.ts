@@ -14,9 +14,10 @@ export const siteConfig = {
   // 网站标题与博主信息
   title: "yexianglun小站",
   // 站点公网地址（用于 RSS/OG/sitemap 等绝对链接）
-  // 2026-10-15 起部署在云服务器：http://122.51.90.31（见 deploy/README.md）
+  // 2026-10-15 起部署在云服务器（见 deploy/README.md）
+  // 已启用 HTTPS：证书是 Let's Encrypt 的 IP 证书（有效期仅 6 天，自动续期）
   // 绑定域名后改这里并重新构建前端 —— 这个值是编译进产物的，改完必须 next build
-  url: "http://122.51.90.31",
+  url: "https://122.51.90.31",
   authorName: "yexianglun",
   bio: "在读学生 ｜ 主攻 Java 后端，也在折腾全栈。项目开源在 GitHub，欢迎 star 和 fork！(◕‿◕)",
   // 个性签名（显示在「关于我」页面头像下方）

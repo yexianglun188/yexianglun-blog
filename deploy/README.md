@@ -27,13 +27,18 @@ Ubuntu 22.04/24.04 + Docker Compose，一条命令起全部服务。
 
 | 容器 | 内部端口 | 说明 | 是否必须 |
 |:---|:---|:---|:---|
-| `kirameku-nginx` | 80 ← 对外 | 反向代理 + 静态素材直出 | 是 |
+| `kirameku-nginx` | 80 + 443 ← 对外 | 反向代理 + 静态素材直出 + HTTPS | 是 |
 | `kirameku-frontend` | 3000 | Next.js 生产模式 | 是 |
 | `kirameku-backend` | 8000 | FastAPI / 管理后台 / 上传目录 | 是 |
 | `kirameku-db` | 5432 | PostgreSQL 16 | 是 |
 | `kirameku-music` | 3301 | 音乐取流，默认不启动 | 否 |
 
-公网只需要放行 **80** 端口，其余端口不对外暴露（`/api`、`/uploads`、`/admin` 都由前端容器在内部转发）。
+公网需要放行 **80 和 443** 两个端口（云厂商控制台的安全组）：
+
+- **443**：正常访问走这里，缺了就打不开
+- **80**：不能关！证书续期要用它做 HTTP-01 验证，只留跳转 HTTPS 的那一条规则
+
+其余端口不对外暴露（`/api`、`/uploads`、`/admin` 都由前端容器在内部转发）。
 
 ## 首部署流程
 
@@ -83,6 +88,39 @@ bash scripts/server-first-deploy.sh
 ```bash
 docker compose --profile music up -d --build
 ```
+
+## HTTPS：Let's Encrypt 的 IP 证书
+
+没有域名也可以有 HTTPS。Let's Encrypt 自 2026 年 1 月起正式支持**裸 IP 证书**，
+本站用的就是它：
+
+| 项 | 值 |
+|:---|:---|
+| 签发 | `certbot certonly --preferred-profile shortlived --webroot --ip-address <IP>` |
+| 有效期 | **160 小时（约 6.6 天）** —— IP 证书强制使用 shortlived 档 |
+| 验证方式 | 只能用 http-01 / tls-alpn-01，**不能用 dns-01** |
+| 续期 | certbot 自带的 systemd timer 每天跑，续完自动 reload nginx |
+| certbot 位置 | `/opt/certbot-venv/bin/certbot`（apt 源里的 2.9 太旧，IP 证书需要 ≥ 5.4） |
+
+**三条硬约束，改配置时别踩**：
+
+1. **80 端口必须一直开着**，且 `/.well-known/acme-challenge/` 不能被重定向到 HTTPS，
+   否则 6 天后续期失败，站点会退回「不安全」
+2. **certbot 需要 ≥ 5.4 才有 webroot + IP 地址支持**。Ubuntu 24.04 的 apt 源只有 2.9，
+   因此装在独立 venv 里：`python3 -m venv /opt/certbot-venv && pip install certbot`
+3. nginx 证书通过只读卷挂载，续期后文件会自动更新，但 **nginx 进程要 reload 才认新证书**，
+   靠 `renew_hook` 完成（已写在 `/etc/letsencrypt/renewal/kirameku-ip.conf`）
+
+手动查看/测试：
+
+```bash
+sudo /opt/certbot-venv/bin/certbot certificates        # 看到期时间
+sudo /opt/certbot-venv/bin/certbot renew --dry-run     # 演练续期，不影响正式证书
+```
+
+> 为什么不用 nip.io 这类免费泛解析域名：实测在中国大陆网络下会被解析到
+> 腾讯云 DNSPod 的拦截页（`webblock.html`），不可靠。
+> 另外大陆服务器用域名访问必须 ICP 备案，IP + IP 证书反而是更省事的路。
 
 ## 日常运维
 
