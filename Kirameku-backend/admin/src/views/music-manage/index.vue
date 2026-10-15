@@ -202,12 +202,11 @@ onMounted(() => {
         </el-button>
       </div>
       <el-alert
-        v-if="platform === 'qq'"
-        type="warning"
+        type="info"
         :closable="false"
         show-icon
         class="mb-3"
-        title="QQ 音乐搜索依赖本地部署的 QQMusicApi 服务（http://localhost:3300）。若搜索报错，请先确认该服务已启动。"
+        title="搜索依赖本地音乐服务（ncm-api，http://localhost:3301）。若搜索报错，请先确认该服务已启动。"
       />
       <pure-table
         :data="searchResults"
