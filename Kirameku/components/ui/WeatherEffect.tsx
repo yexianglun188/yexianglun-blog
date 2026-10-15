@@ -6,10 +6,16 @@ import { siteConfig } from "@/siteConfig";
 
 /**
  * 彩蛋 7：天气彩蛋
- * 默认关闭：只有 siteConfig.weatherCity 显式配置了城市才启用。
- * （自动定位版曾把阴/雾天画成全屏光斑盖住背景图，已回退——雾/晴/阴不做粒子。）
- * 支持天气：snow 雪 / rain 雨 / thunder 雷暴 / wind 大风
- * 真实效果：雨滴重力加速+地面溅落、雪花左右摆动、雷暴随机闪电、密度随雨量等级变化。
+ * 按访客所在地的实时天气，让全站飘雪 / 飘雨 / 雷暴 / 大风。
+ *
+ * 配置见 siteConfig.weatherCity：
+ *   ""    按访客 IP 自动定位（默认，推荐）
+ *   "off" 彻底关闭
+ *   "北京" 固定城市
+ *
+ * 注意：晴 / 多云 / 阴 / 雾 一律不做粒子 —— 早期版本给阴雾天画了全屏光斑，
+ * 会把背景图糊掉，已明确排除（见 classify 里的注释）。
+ * 真实效果：雨滴重力加速 + 地面溅落、雪花左右摆动、雷暴随机闪电、密度随雨量等级变化。
  */
 
 type WeatherType = "snow" | "rain" | "thunder" | "wind";
@@ -118,14 +124,23 @@ export default function WeatherEffect() {
   const [weather, setWeather] = useState<WeatherType | null>(null);
   const [intensity, setIntensity] = useState<number>(1);
 
-  const city = siteConfig.weatherCity;
-  // 默认关闭：只有显式配置了 weatherCity 才启用
-  const disabled = pathname?.startsWith("/garden/") || !city;
+  const city = (siteConfig.weatherCity ?? "").trim();
+  // 三态：
+  //   "off"   → 彻底关闭
+  //   ""      → 按访客 IP 自动定位（wttr.in 不传城市时会用请求方 IP，
+  //             而请求是从访客浏览器发出的，所以拿到的是访客所在地天气）
+  //   "北京"   → 固定城市
+  const off = city.toLowerCase() === "off";
+  // garden 子站不叠加粒子（那边已经有自己的星空背景）
+  const disabled = Boolean(pathname?.startsWith("/garden/")) || off;
 
   useEffect(() => {
     if (disabled) return;
     let cancelled = false;
-    fetch(`https://wttr.in/${encodeURIComponent(city!)}?format=%C+%c&lang=zh`, { signal: AbortSignal.timeout(8000) })
+    const url = city
+      ? `https://wttr.in/${encodeURIComponent(city)}?format=%C+%c&lang=zh`
+      : "https://wttr.in/?format=%C+%c&lang=zh";
+    fetch(url, { signal: AbortSignal.timeout(8000) })
       .then((r) => r.text())
       .then((text) => {
         if (cancelled) return;
