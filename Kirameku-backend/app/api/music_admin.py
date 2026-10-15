@@ -1,16 +1,13 @@
-"""音乐管理（双平台：网易云 + QQ 音乐）
+"""音乐管理（酷我 + 网易云）
 
 数据落地在 music 表（platform + song_id + 可空 media_url）。
-QQ 音乐的播放链接带 vkey 有时效，不落库，播放时由 /api/music/url 动态取。
+播放链接都带时效，不落库，播放时由 /api/music/url 动态取。
 
 为兼容旧前端契约，网易云的歌曲仍会镜像一份到 site_config 的
-cloud_music_ids / cloud_music_meta（QQ 歌曲不镜像，因为 meting 解析不了）。
+cloud_music_ids / cloud_music_meta。
 """
 
-import json
-import os
 import time
-from pathlib import Path
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
@@ -23,7 +20,7 @@ from app.services import music_search
 
 router = APIRouter(prefix="/api/music-admin", tags=["音乐管理"])
 
-SUPPORTED_PLATFORMS = ("kuwo", "netease", "qq")
+SUPPORTED_PLATFORMS = ("kuwo", "netease")
 
 IDS_KEY = "cloud_music_ids"
 META_KEY = "cloud_music_meta"
@@ -78,12 +75,12 @@ def _row(m: Music) -> Dict[str, Any]:
 @router.get("/search")
 async def search_songs(
     keyword: str = Query(..., min_length=1, max_length=50),
-    platform: str = Query("netease", description="netease | qq"),
+    platform: str = Query("netease", description="netease | kuwo"),
     limit: int = Query(20, ge=1, le=50),
     session: Session = Depends(get_session),
     _: dict = Depends(get_current_user),
 ):
-    """按歌名搜索，platform 决定走网易云还是本地 QQ 音乐服务"""
+    """按歌名搜索，platform 决定走网易云还是酷我索引"""
     platform = (platform or "netease").lower().strip()
     if platform not in SUPPORTED_PLATFORMS:
         raise HTTPException(status_code=400, detail=f"不支持的平台: {platform}，可选 {SUPPORTED_PLATFORMS}")
@@ -125,7 +122,7 @@ def add_song(
     """添加一首歌
 
     body: {id, name, artist, platform, album, cover, duration}
-    id：网易云传数字 id，QQ 传 songmid
+    id：歌曲 id（酷我 / 网易云均为各自平台的歌曲 id）
     """
     platform = str(payload.get("platform") or "netease").lower().strip()
     if platform not in SUPPORTED_PLATFORMS:
@@ -151,7 +148,7 @@ def add_song(
         album=str(payload.get("album") or ""),
         cover=str(payload.get("cover") or ""),
         duration=str(payload.get("duration") or ""),
-        media_url=None,          # QQ 的 vkey 链接不落库；网易云由 /api/music 动态解析
+        media_url=None,          # 播放链接都带时效，统一播放前动态取
         sort=(top.sort + 1) if top else 0,
     )
     session.add(song)
@@ -190,81 +187,6 @@ def clear_songs(
     session.commit()
     _mirror_netease(session)
     return {"ok": True, "total": 0}
-
-
-# ── QQ 音乐登录态（vkey 必须）────────────────────────────
-@router.get("/qq-status")
-async def qq_status(_: dict = Depends(get_current_user)):
-    """查看本地 QQ 音乐服务的登录态
-
-    注意：不能调 QQMusicApi 的 /user/cookie —— 那个返回的是「网站自己的 cookie jar」，
-    而不是 /song/url 真正消费的「服务端注入 cookie」（data/cookie.json）。
-    所以这里直接读 data/cookie.json（可用环境变量 QQ_MUSIC_DATA_DIR 覆盖路径）。
-    """
-    cookie_file = Path(os.environ.get("QQ_MUSIC_DATA_DIR", r"E:\liu\QQMusicApi\data")) / "cookie.json"
-
-    cookie: Dict[str, Any] = {}
-    if cookie_file.exists():
-        try:
-            cookie = json.loads(cookie_file.read_text(encoding="utf-8"))
-        except (ValueError, OSError):
-            cookie = {}
-
-    uin = str(cookie.get("uin") or "")
-    has_key = bool(cookie.get("qqmusic_key") or cookie.get("qm_keyst"))
-    expires_at = int(cookie.get("psrf_access_token_expiresAt") or 0)
-
-    if not uin:
-        hint = "尚未注入 QQ 音乐登录 cookie，QQ 歌曲将无法播放"
-    elif not has_key:
-        hint = "cookie 里缺少 qqmusic_key，QQ 歌曲将无法播放，请重新注入完整 cookie"
-    elif expires_at and expires_at < int(time.time()):
-        hint = "登录态已过期（psrf_access_token 到期），请重新去 y.qq.com 复制 cookie 注入"
-    else:
-        hint = ""
-
-    return {
-        "online": bool(uin and has_key),
-        "uin": uin,
-        "hasVkeyCredential": has_key,
-        "expiresAt": expires_at,
-        "hint": hint,
-    }
-
-
-@router.post("/qq-cookie")
-async def set_qq_cookie(
-    payload: dict = Body(...),
-    _: dict = Depends(get_current_user),
-):
-    """把 QQ 音乐网页版的 cookie 注入本地 QQMusicApi 服务
-
-    body: {cookie: "uin=123456; qqmusic_key=xxx; ..."}
-    获取方式：浏览器登录 y.qq.com → F12 → Network → 任一个请求的 Cookie 整条复制
-    """
-    cookie = str(payload.get("cookie") or "").strip()
-    if not cookie:
-        raise HTTPException(status_code=400, detail="cookie 不能为空")
-    if "uin=" not in cookie:
-        raise HTTPException(status_code=400, detail="cookie 里找不到 uin，请从 y.qq.com 复制完整 cookie")
-
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.post(f"{QQ_MUSIC_API}/user/setCookie", json={"data": cookie})
-    except httpx.RequestError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"无法连接本地 QQ 音乐服务（{QQ_MUSIC_API}）：{exc}"
-        ) from exc
-
-    if resp.status_code != 200:
-        raise HTTPException(status_code=502, detail=f"QQ 音乐服务返回 HTTP {resp.status_code}")
-
-    try:
-        result = resp.json()
-    except ValueError:
-        raise HTTPException(status_code=502, detail="QQ 音乐服务返回了非 JSON 数据")
-
-    return {"ok": result.get("result") == 100, "message": result.get("data") or "已注入"}
 
 
 def _count(session: Session) -> int:

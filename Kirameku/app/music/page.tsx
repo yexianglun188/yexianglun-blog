@@ -410,16 +410,13 @@ export default function MusicPage() {
                     )}
                     {/* 平台标记 */}
                     <span className={`hidden md:inline text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                      song.platform === "qq"
-                        ? "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400"
-                        : song.platform === "local"
+                      song.platform === "local"
                         ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400"
                         : song.platform === "kuwo"
                         ? "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400"
                         : "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400"
                     }`}>
-                      {song.platform === "qq" ? "QQ"
-                        : song.platform === "local" ? "本地"
+                      {song.platform === "local" ? "本地"
                         : song.platform === "kuwo" ? "酷我"
                         : "网易云"}
                     </span>

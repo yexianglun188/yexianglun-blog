@@ -1,9 +1,9 @@
 import { http } from "@/utils/http";
 
-/** 平台标识：netease=网易云音乐 / qq=QQ音乐 */
-export type MusicPlatform = "netease" | "qq";
+/** 平台标识：kuwo=酷我音乐 / netease=网易云音乐 */
+export type MusicPlatform = "kuwo" | "netease";
 
-/** 搜索结果（双平台统一结构） */
+/** 搜索结果（多平台统一结构） */
 export type MusicSearchItem = {
   id: string;
   platform: MusicPlatform;
@@ -27,9 +27,11 @@ export type MusicSelectedItem = {
   media_url: string;
 };
 
+// 酷我排第一：网易云的搜索索引会过滤掉周杰伦等高版权歌曲的原唱（搜「晴天」只出翻唱），
+// 酷我索引完整，能直接搜到原唱。
 export const PLATFORM_OPTIONS: { value: MusicPlatform; label: string }[] = [
-  { value: "netease", label: "网易云音乐" },
-  { value: "qq", label: "QQ音乐" }
+  { value: "kuwo", label: "酷我音乐" },
+  { value: "netease", label: "网易云音乐" }
 ];
 
 /** 按歌名搜索（platform 决定走哪个平台） */
@@ -44,7 +46,7 @@ export const getSelectedMusic = () => {
   return http.request<MusicSelectedItem[]>("get", "/api/music-admin/list");
 };
 
-/** 添加歌曲（platform + id：网易云传数字id，QQ传songmid） */
+/** 添加歌曲（platform + id） */
 export const addMusic = (data: {
   id: string;
   name: string;
@@ -61,7 +63,7 @@ export const addMusic = (data: {
   );
 };
 
-/** 移除歌曲（需同时传平台，netease/qq 的 id 可能重复） */
+/** 移除歌曲（需同时传平台，两个平台的 id 可能重复） */
 export const removeMusic = (id: string, platform: MusicPlatform) => {
   return http.request<{ ok: boolean; total: number }>(
     "delete",
@@ -74,24 +76,5 @@ export const clearMusic = () => {
   return http.request<{ ok: boolean; total: number }>(
     "post",
     "/api/music-admin/clear"
-  );
-};
-
-/** QQ 音乐登录态状态 */
-export const getQqStatus = () => {
-  return http.request<{
-    online: boolean;
-    uin: string;
-    hasVkeyCredential: boolean;
-    hint: string;
-  }>("get", "/api/music-admin/qq-status");
-};
-
-/** 注入 QQ 音乐网页版 cookie（vkey 取流必须） */
-export const setQqCookie = (cookie: string) => {
-  return http.request<{ ok: boolean; message: string }>(
-    "post",
-    "/api/music-admin/qq-cookie",
-    { data: { cookie } }
   );
 };

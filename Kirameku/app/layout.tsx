@@ -62,9 +62,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans">
         {/*
-          防盗链：QQ 音乐的 CDN（dl.stream.qq.com / c6.y.qq.com 等）会校验 Referer，
-          不带或带错 Referer 时直接返回 403，导致音频加载失败。
-          no-referrer 让浏览器请求这些跨域资源时不发送 Referer 头，绕开校验。
+          防盗链：第三方音乐 CDN 会校验 Referer，不带或带错 Referer 时
+          直接返回 403，导致音频加载失败。no-referrer 让浏览器请求这些
+          跨域资源时不发送 Referer 头，绕开校验。
           影响范围仅限本页发出的子资源请求，不影响接口调用。
         */}
         <meta name="referrer" content="no-referrer" />

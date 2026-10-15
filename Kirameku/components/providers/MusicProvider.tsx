@@ -41,9 +41,9 @@ interface Song {
   src: string;
   lrcUrl: string;
   lyrics: { time: number; text: string }[];
-  /** 平台：kuwo / netease 的 src 由 /api/music/url 解析（含流代理）；qq 播放前需动态取 vkey */
-  platform: "kuwo" | "netease" | "qq" | "local";
-  /**歌曲 id（酷我/网易云为数字 id，QQ 为 songmid），动态取流用 */
+  /** 平台：kuwo / netease 的 src 由 /api/music/url 解析（含流代理） */
+  platform: "kuwo" | "netease" | "local";
+  /** 歌曲 id，动态取流用 */
   songId: string;
 }
 
@@ -52,7 +52,7 @@ interface Song {
  *  导致酷我的歌全被当成网易云，取流时用酷我 id 去问网易云，必然拿不到地址。 */
 function normalizePlatform(raw: unknown): Song["platform"] {
   const v = String(raw || "").toLowerCase().trim();
-  if (v === "qq" || v === "netease" || v === "kuwo" || v === "local") return v;
+  if (v === "netease" || v === "kuwo" || v === "local") return v;
   return "netease";
 }
 
@@ -67,7 +67,7 @@ interface MusicContextType {
   currentLyric: string;
   allLyrics: { time: number; text: string }[];
   isLoading: boolean;
-  /** 播放失败提示（如 QQ 版权限制），null 表示无错误 */
+  /** 播放失败提示（如版权限制无可用音源），null 表示无错误 */
   playError: string | null;
   volume: number;
   isMuted: boolean;
@@ -90,7 +90,7 @@ interface MusicContextType {
 /** 前台搜索结果的一条（来自 /api/music/search） */
 export interface SearchTrack {
   id: string;
-  platform: "kuwo" | "netease" | "qq";
+  platform: "kuwo" | "netease";
   name: string;
   artist: string;
   album?: string;
@@ -119,8 +119,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const playModeRef = useRef(playMode);
   const nextSongRef = useRef<(auto?: boolean) => void>(() => {});
   const isPlayingRef = useRef(isPlaying);
-  // 当前歌曲真实可播放的地址：QQ 音乐是动态取回来的 vkey 直链，
-  // 网易云/本地歌曲直接用 song.src
+  // 当前歌曲真实可播放的地址。歌单接口多数不带直链（播放链接都带时效），
+  // 需要切歌时调 /api/music/url 动态取；本地歌曲则直接用 song.src
   const [currentSrc, setCurrentSrc] = useState("");
   /**
    * currentSrc 属于哪一首歌（下标）。currentSrc 是跨歌共享的 state，
@@ -161,8 +161,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           }
         } catch { /* 用静态配置回退 */ }
 
-        // ── 1) 后台添加的歌曲（music 表，双平台）──────────────
-        // QQ 音乐这一批 src 为空，播放时再调 /api/music/url 动态取 vkey
+        // ── 1) 后台添加的歌曲（music 表，酷我 / 网易云）────────
+        // 这一批通常不带直链，播放时再调 /api/music/url 动态取
         let dbSongs: Song[] = [];
         try {
           const trackRes = await fetch("/api/music/tracks");
@@ -354,16 +354,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           setLyrics(parseLrc(String(d?.data?.lrc || "")));
         })
         .catch(() => {});
-    } else if (song.platform === "qq" && song.songId) {
-      // QQ 音乐歌词：后端代理本地 QQMusicApi 的 /lyric（返回 base64 LRC）
-      fetch(`/api/music/lyric?platform=qq&songmid=${encodeURIComponent(song.songId)}`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (!mounted) return;
-          const parsed = parseLrc(String(d?.data?.lrc || ""));
-          setLyrics(parsed);
-        })
-        .catch(() => {});
     }
 
     // 注意：这里不再调用 play()。续播统一由上面的「播放地址解析」effect 负责，
@@ -405,7 +395,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   /**
    * 播放地址解析：切歌时负责把正确的播放地址交给 <audio>。
    * - 网易云 / 本地歌曲：song.src 已经是直链，直接用
-   * - QQ 音乐：song.src 为空（vkey 有时效、不落库），
+   * - 酷我 / 网易云歌单曲目：song.src 为空（播放链接带时效、不落库），
    *   先调后端 /api/music/url 拿到真实 MP3 地址
    *
    * 「开始播放」不在这里做，统一由 <audio> 的 onCanPlay 负责：
@@ -436,7 +426,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // 其余情况现取流：QQ、酷我、网易云一视同仁。
+    // 其余情况现取流：酷我、网易云一视同仁。
     // 早期版本写的是 `platform !== "qq"` 就直接用 song.src，导致初始化取流失败的
     // 歌点了永远没反应，也永不重试。
     //
@@ -583,8 +573,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      if (!src && track.platform !== "qq") {
+      if (!src) {
         // 酷我 / 网易云：直接问后端要流（返回的是本站代理地址，同源无 CORS 问题）
+        // 早期这里写的是 `platform !== "qq"` 才取流，QQ 链路移除后所有平台一视同仁。
         try {
           const qs = new URLSearchParams({
             platform: track.platform,

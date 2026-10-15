@@ -14,7 +14,7 @@ set SCOPE=%1
 
 call :KILLPORT 3000 "Frontend     3000"
 call :KILLPORT 8000 "Backend      8000"
-call :KILLPORT 3300 "QQMusicApi   3300"
+call :KILLPORT 3301 "MusicApi     3301"
 
 if /i "%SCOPE%"=="all" (
     echo.
@@ -33,14 +33,14 @@ if /i "%SCOPE%"=="all" (
 echo.
 echo ============================================
 echo    Done. Remaining listeners:
-netstat -ano | findstr "LISTENING" | findstr ":3000 :8000 :3300"
+netstat -ano | findstr "LISTENING" | findstr ":3000 :8000 :3301"
 echo ============================================
 echo.
 echo Tip: start again with:
 echo    start-frontend.bat          (dev mode, hot reload)
 echo    start-frontend-prod.bat     (production mode, for public access)
 echo    start-backend.bat           (backend API)
-echo    start-qqmusic.bat           (QQ music service)
+echo    start-music.bat             (music service, port 3301)
 echo.
 pause
 exit /b 0

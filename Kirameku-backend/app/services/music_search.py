@@ -1,4 +1,4 @@
-"""音乐搜索（双平台统一映射）
+"""音乐搜索（多平台统一映射）
 
 后台 `/api/music-admin/search` 和前台 `/api/music/search` 共用这一层，
 区别只是后台多返回一个 `added` 标记（是否已入库）。
@@ -9,8 +9,9 @@
              原唱过滤掉了（搜「晴天」只出翻唱），但酷我索引完整，能直接搜到原唱。
   - netease ：走本地 NCM API Enhanced（3301）的 /cloudsearch；
              该服务不可用时回退到网易云公开 web 接口
-  - qq     ：打本地 QQMusicApi（http://localhost:3300），
-             需要已注入登录 cookie 才能拿到可播放的歌曲
+
+早期还有一个 qq 源（本地 QQMusicApi，3300），已随 QQ 链路一起移除：
+它依赖注入登录 cookie，且高版权歌曲基本拿不到可播地址，维护成本远大于收益。
 """
 
 from typing import Any, Dict, List
@@ -19,7 +20,6 @@ import httpx
 
 NETEASE_SEARCH_URL = "https://music.163.com/api/search/get/web"
 NCM_API = "http://localhost:3301"
-QQ_MUSIC_API = "http://localhost:3300"
 
 HEADERS = {
     "User-Agent": (
@@ -30,7 +30,7 @@ HEADERS = {
     "Accept": "application/json",
 }
 
-SUPPORTED_PLATFORMS = ("kuwo", "netease", "qq")
+SUPPORTED_PLATFORMS = ("kuwo", "netease")
 
 
 def _fmt_duration(seconds: int) -> str:
@@ -185,52 +185,6 @@ def search_kuwo(keyword: str, limit: int = 20) -> List[Dict[str, Any]]:
     return _sort_original_first(list(songs), keyword)[:limit]
 
 
-async def search_qq(keyword: str, limit: int = 20) -> List[Dict[str, Any]]:
-    """QQ 音乐搜索（走本地 QQMusicApi），返回统一结构"""
-    try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            resp = await client.get(
-                f"{QQ_MUSIC_API}/search",
-                params={"key": keyword, "pageNo": 1, "pageSize": limit, "t": 0},
-                headers={"Referer": "https://y.qq.com/", "User-Agent": HEADERS["User-Agent"]},
-            )
-    except httpx.RequestError as exc:
-        raise ConnectionError(f"无法连接本地 QQ 音乐服务（{QQ_MUSIC_API}）：{exc}") from exc
-
-    if resp.status_code != 200:
-        raise ConnectionError(f"QQ 音乐服务返回 HTTP {resp.status_code}")
-
-    try:
-        payload = resp.json()
-    except ValueError as exc:
-        raise ConnectionError("QQ 音乐服务返回了非 JSON 数据") from exc
-
-    raw_list = ((payload.get("data") or {}).get("list")) or []
-    results = []
-    for s in raw_list:
-        mid = str(s.get("songmid") or "").strip()
-        if not mid:
-            continue
-        singers = s.get("singer") or []
-        album_mid = s.get("albummid") or ""
-        results.append(
-            {
-                "id": mid,          # QQ 用 songmid 作为唯一标识
-                "platform": "qq",
-                "name": s.get("songname") or "未知歌曲",
-                "artist": ", ".join(
-                    x.get("name", "") for x in singers if isinstance(x, dict) and x.get("name")
-                ),
-                "album": s.get("albumname") or "",
-                "duration": _fmt_duration(s.get("interval") or 0),
-                # QQ 封面：搜索接口不直接给封面字段，用 albummid 拼官方图片 CDN。
-                # 注意路径必须是 photo_new，老文档里的 photo_500 已 404。
-                "cover": f"https://y.gtimg.cn/music/photo_new/T002R300x300M000{album_mid}.jpg" if album_mid else "",
-            }
-        )
-    return results
-
-
 async def search(keyword: str, platform: str, limit: int = 20) -> List[Dict[str, Any]]:
     platform = (platform or "kuwo").lower().strip()
     if platform not in SUPPORTED_PLATFORMS:
@@ -239,4 +193,4 @@ async def search(keyword: str, platform: str, limit: int = 20) -> List[Dict[str,
         return search_kuwo(keyword, limit)
     if platform == "netease":
         return search_netease(keyword, limit)
-    return await search_qq(keyword, limit)
+    raise ValueError(f"不支持的平台: {platform}")

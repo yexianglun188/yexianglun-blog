@@ -19,7 +19,6 @@ const ALLOWED_HOSTS = [
   "kuwo.cn",
   "music.126.net",
   "126.net",
-  "qq.com",
   "kugou.com",
 ];
 

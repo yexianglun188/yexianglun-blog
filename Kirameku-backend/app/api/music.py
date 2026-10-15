@@ -9,8 +9,6 @@
 跨平台（酷我/咪咕等）找同名单曲的替代源，实测周杰伦原唱可正常播放。
 """
 
-import json
-import random
 import re
 import time
 from typing import Any, Dict, List, Optional
@@ -31,16 +29,12 @@ router = APIRouter(prefix="/api/music", tags=["音乐"])
 # 必须以 ENABLE_GENERAL_UNBLOCK=true 启动，否则 VIP 歌曲拿不到地址。
 NCM_API = "http://localhost:3301"
 
-# 备用：旧版QQMusicApi（jsososo/QQMusicApi），默认端口 3300。
-# 仅在需要 QQ 歌词时用到，它的取流能力已经很弱（VIP 基本拿不到）。
-QQ_MUSIC_API = "http://localhost:3300"
-
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     ),
-    "Referer": "https://y.qq.com/",
+    "Referer": "https://music.163.com/",
 }
 
 # 流地址有时效，缓存 5 分钟；过期后前端下次播放会自动重新取
@@ -115,20 +109,6 @@ def _resolve_netease_url(song_id: str) -> str:
         status_code=502,
         detail="这首歌暂时无法播放（各平台均无可用音源）",
     )
-
-
-# QQ 现在对不同歌曲可用的码率并不一致：320k/500k 常常只拿到 purl 但 CDN 回 404，
-# 而部分歌曲（尤其老专辑母带）反而能正常播。所以这里按「先高音质、失败降码率」
-# 的顺序逐个尝试，并且每个候选地址都实际探测一次（Range 请求 0-0），
-# 只把真正返回 200 的地址交给前端，避免浏览器拿到死链后静默没声音。
-_QUALITY_CDN = (
-    # (filename 前缀, 是否探测)  —— 顺序即优先级
-    ("M800", True),   # 320k mp3
-    ("M500", True),   # 128k mp3
-    ("C400", True),   # 400k m4a（部分歌曲只有 flac/ape 之外的 AAC 资源）
-    ("M800", False),  # 高码率 purl 存在但探测失败时的兜底，直接给地址
-)
-_PROBE_TIMEOUT = 8.0
 
 
 def _lyric_from_netease(song_id: str) -> str:
@@ -287,21 +267,6 @@ def _proxy_url(url: str) -> str:
     return f"/api/music/audio?url={quote(url, safe='')}"
 
 
-def _probe_playable(url: str) -> bool:
-    """用 Range 请求探测音频地址是否真的能取到数据。"""
-    try:
-        resp = httpx.get(
-            url,
-            headers={**HEADERS, "Range": "bytes=0-1023"},
-            timeout=_PROBE_TIMEOUT,
-            follow_redirects=True,
-        )
-    except httpx.RequestError:
-        return False
-    # 206 Partial Content / 200 OK 都算可播；416 说明 vkey 完全失效
-    return resp.status_code in (200, 206)
-
-
 def _cached_url(key: str, producer) -> str:
     now = time.time()
     hit = _url_cache.get(key)
@@ -312,130 +277,17 @@ def _cached_url(key: str, producer) -> str:
     return value
 
 
-def _qq_vkey(mid: str, prefix: str) -> Optional[dict]:
-    """向 QQ 上游请求 vkey，返回 midurlinfo 那一条（失败返回 None）。"""
-    filename = f"{prefix}{mid}.mp3"
-    guid = str(random.randint(1000000, 9999999))
-    payload = {
-        "-": "getplaysongvkey",
-        "g_tk": 5381,
-        "loginUin": 0,
-        "hostUin": 0,
-        "format": "json",
-        "inCharset": "utf8",
-        "outCharset": "utf-8",
-        "notice": 0,
-        "platform": "yqq.json",
-        "needNewCode": 0,
-        "data": json.dumps({
-            "req_0": {
-                "module": "vkey.GetVkeyServer",
-                "method": "CgiGetVkey",
-                "param": {
-                    "filename": [filename],
-                    "guid": guid,
-                    "songmid": [mid],
-                    "songtype": [0],
-                    "uin": "0",
-                    "loginflag": 1,
-                    "platform": "20",
-                },
-            },
-            "comm": {"uin": "0", "format": "json", "ct": 19, "cv": 0},
-        }),
-    }
-    try:
-        resp = httpx.get(
-            "https://u.y.qq.com/cgi-bin/musicu.fcg",
-            params=payload,
-            headers={**HEADERS, "Origin": "https://y.qq.com"},
-            timeout=15,
-        )
-    except httpx.RequestError:
-        return None
-    if resp.status_code != 200:
-        return None
-    try:
-        outer = resp.json()
-        raw = outer["req_0"]["data"]
-        inner = raw if isinstance(raw, dict) else json.loads(raw)
-        items = inner.get("midurlinfo") or []
-    except (ValueError, KeyError, TypeError):
-        return None
-    if not items:
-        return None
-    item = dict(items[0])
-    # 关键：CDN 域名列表在响应的【顶层 data.sip】，不在 midurlinfo[0].sip
-    # （后者恒为空数组）。读错位置会导致 purl 有值但一个候选地址都拼不出来。
-    item["sip"] = inner.get("sip") or item.get("sip") or []
-    return item
-
-
-def _qq_playlist_url(mid: str, quality: str) -> Optional[str]:
-    """优先走本地 QQMusicApi（它可能带了已登录 cookie），拿它的完整地址。"""
-    try:
-        resp = httpx.get(
-            f"{QQ_MUSIC_API}/song/url",
-            params={"id": mid, "type": quality},
-            headers=HEADERS,
-            timeout=15,
-            follow_redirects=False,
-        )
-        if resp.status_code != 200:
-            return None
-        payload = resp.json()
-        if payload.get("result") != 100 or not payload.get("data"):
-            return None
-        return str(payload["data"])
-    except (httpx.RequestError, ValueError):
-        return None
-
-
-def _resolve_qq_play_url(mid: str) -> str:
-    """按「本地服务 → 直连上游多码率探测」的顺序找一条真正能播的地址。"""
-    # 1) 本地 QQMusicApi（登录态可用时它最准）
-    for quality in ("320", "128", "flac"):
-        url = _qq_playlist_url(mid, quality)
-        if url:
-            url = url.replace("http://", "https://", 1)
-            if _probe_playable(url):
-                return url
-
-    # 2) 直连 QQ 上游：多码率 + 多 CDN 逐个探测
-    fallback = ""
-    for prefix, probe in _QUALITY_CDN:
-        info = _qq_vkey(mid, prefix)
-        if not info or not info.get("purl"):
-            continue
-        hosts = info.get("sip") or []
-        for host in hosts:
-            candidate = host + info["purl"]
-            candidate = candidate.replace("http://", "https://", 1)
-            if probe:
-                if _probe_playable(candidate):
-                    return candidate
-            elif not fallback:
-                fallback = candidate
-    if fallback:
-        return fallback
-
-    raise HTTPException(
-        status_code=502,
-        detail="这首歌暂时无法播放（QQ 版权限制或无可用码率），试试切到网易云来源",
-    )
-
-
 def _row_to_track(m: Music) -> Dict[str, Any]:
     return {
         "id": f"{m.platform}:{m.song_id}",   # 全局唯一，前端直接当 key 用
         "platform": m.platform,
-        "songId": m.song_id,                 # 网易云 id / QQ songmid
+        "songId": m.song_id,                 # 酷我 / 网易云的歌曲 id
         "title": m.name,
         "artist": m.artist,
         "album": m.album,
         "cover": m.cover,
         "duration": m.duration,
-        "src": m.media_url or "",            # QQ 音乐为空，需动态取
+        "src": m.media_url or "",            # 留空则由前端播放前动态取
     }
 
 
@@ -449,7 +301,7 @@ def list_tracks(session: Session = Depends(get_session)):
 @router.get("/search")
 async def search_songs(
     key: str = Query(..., min_length=1, description="歌曲关键词"),
-    platform: str = Query("netease", description="netease | qq"),
+    platform: str = Query("netease", description="netease | kuwo"),
     limit: int = Query(20, ge=1, le=50),
 ):
     """前台搜歌（无需登录）
@@ -468,13 +320,13 @@ async def search_songs(
 
 @router.get("/url")
 def resolve_url(
-    platform: str = Query(..., description="kuwo | netease | qq"),
-    songmid: str = Query(..., description="酷我/网易云传歌曲 id；QQ 传 songmid"),
+    platform: str = Query(..., description="kuwo | netease"),
+    songmid: str = Query(..., description="歌曲 id"),
 ):
     """解析真实播放地址。
 
     - netease：走本地 NCM API，普通接口拿不到就解灰（VIP 曲也能播）
-    - qq：多码率 + 多 CDN 逐个探测（能力已很弱，仅保留兼容）
+    - kuwo：走本地 NCM API 的酷我补丁接口
 
     酷我 / 网易云解灰拿到的都是第三方 CDN 地址，浏览器直接放进`<audio src>`
     会被 CORS 拦掉，所以统一包一层本站流代理（/api/music/audio）再交给前端。
@@ -492,20 +344,13 @@ def resolve_url(
         url = _cached_url(f"ne:{mid}", lambda: _resolve_netease_url(mid))
         return {"isSuccess": True, "data": {"url": _proxy_url(url)}}
 
-    if platform != "qq":
-        raise HTTPException(status_code=400, detail=f"不支持的平台: {platform}")
-
-    def produce() -> str:
-        return _resolve_qq_play_url(mid)
-
-    url = _cached_url(f"qq:{mid}", produce)
-    return {"isSuccess": True, "data": {"url": _proxy_url(url)}}
+    raise HTTPException(status_code=400, detail=f"不支持的平台: {platform}")
 
 
 @router.get("/lyric")
 def resolve_lyric(
-    platform: str = Query(..., description="kuwo | netease | qq"),
-    songmid: str = Query(..., description="酷我/网易云传歌曲 id；QQ 传 songmid"),
+    platform: str = Query(..., description="kuwo | netease"),
+    songmid: str = Query(..., description="歌曲 id"),
     name: str = Query("", description="歌名（酷我按歌名去网易云匹配歌词时需要）"),
     artist: str = Query("", description="歌手（同上）"),
 ):
@@ -514,7 +359,10 @@ def resolve_lyric(
     - netease：走本地 NCM API /lyric
     - kuwo：酷我自己的歌词接口要 csrf token（拿不到），所以用「歌名 + 歌手」
       去网易云 cloudsearch 找最相近的一首，再取它的歌词
-    - qq：本地 QQMusicApi（3300）
+
+    匹配歌手时注意用包含而非相等判断：网易云常把本名/别名塞进括号
+    （酷我给「买辣椒也用券」，网易云存「冯沁苑(买辣椒也用券)」），
+    等号比对会把最匹配的结果跳过。
     """
     platform = (platform or "").lower().strip()
     mid = (songmid or "").strip()
@@ -525,38 +373,7 @@ def resolve_lyric(
     if platform == "kuwo":
         return {"isSuccess": True, "data": {"lrc": _lyric_for_kw_song(name, artist)}}
 
-    if platform != "qq":
-        raise HTTPException(status_code=400, detail=f"不支持的平台: {platform}")
-    if not mid:
-        raise HTTPException(status_code=400, detail="缺少 songmid")
-
-    try:
-        resp = httpx.get(
-            f"{QQ_MUSIC_API}/lyric",
-            params={"songmid": mid},
-            headers=HEADERS,
-            timeout=15,
-        )
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"无法连接本地 QQ 音乐服务(3300)：{exc}") from exc
-
-    if resp.status_code != 200:
-        raise HTTPException(status_code=502, detail=f"QQ 音乐服务返回 HTTP {resp.status_code}")
-
-    try:
-        payload = resp.json()
-    except ValueError:
-        return {"isSuccess": True, "data": {"lrc": "", "trans": ""}}
-
-    # QQMusicApi 成功时返回 {result: 100, data: {lyric: "<LRC 文本>", trans: "<译文 LRC>"}}
-    # 注意：lyric/trans 都是明文，不是 base64
-    data = payload.get("data")
-    if isinstance(data, dict):
-        lrc = str(data.get("lyric") or "")
-        trans = str(data.get("trans") or "")
-    else:
-        lrc, trans = "", ""
-    return {"isSuccess": True, "data": {"lrc": lrc, "trans": trans}}
+    raise HTTPException(status_code=400, detail=f"不支持的平台: {platform}")
 
 
 # ── 音频代理 ────────────────────────────────────────────────
@@ -571,7 +388,6 @@ _ALLOWED_AUDIO_HOSTS = (
     "kuwo.cn",           # 解灰首选源 unm（酷我）
     "music.126.net",     # 网易云自家 CDN
     "126.net",           # 网易云兜底
-    "qq.com",            # QQ 音乐 CDN
     "kugou.com",         # 酷狗 CDN
 )
 

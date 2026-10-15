@@ -7,8 +7,6 @@ import {
   addMusic,
   removeMusic,
   clearMusic,
-  getQqStatus,
-  setQqCookie,
   PLATFORM_OPTIONS,
   type MusicSearchItem,
   type MusicSelectedItem,
@@ -17,48 +15,14 @@ import {
 
 defineOptions({ name: "MusicManageIndex" });
 
+// 默认酷我：网易云的搜索索引会过滤掉周杰伦等高版权歌曲的原唱（搜「晴天」只出翻唱），
+// 酷我索引完整，能直接搜到原唱。
 const keyword = ref("");
-const platform = ref<MusicPlatform>("netease");
+const platform = ref<MusicPlatform>("kuwo");
 const searching = ref(false);
 const searchResults = ref<MusicSearchItem[]>([]);
 const selected = ref<MusicSelectedItem[]>([]);
 const loading = ref(false);
-
-// ── QQ 音乐登录态 ──
-const qqCookie = ref("");
-const qqSaving = ref(false);
-const qqStatus = ref<{ online: boolean; uin: string; hasVkeyCredential: boolean; hint: string } | null>(null);
-
-async function loadQqStatus() {
-  try {
-    qqStatus.value = (await getQqStatus()) ?? null;
-  } catch (e: any) {
-    qqStatus.value = { online: false, uin: "", hasVkeyCredential: false, hint: e?.message || "QQ 音乐服务未连接" };
-  }
-}
-
-async function onSaveQqCookie() {
-  const c = qqCookie.value.trim();
-  if (!c) {
-    msg("请先粘贴 cookie", { type: "warning" });
-    return;
-  }
-  qqSaving.value = true;
-  try {
-    const res = await setQqCookie(c);
-    if (res?.ok) {
-      msg("cookie 已注入，QQ 音乐现在可以播放了", { type: "success" });
-      qqCookie.value = "";
-    } else {
-      msg(res?.message || "注入失败", { type: "error" });
-    }
-    await loadQqStatus();
-  } catch (e: any) {
-    msg(e?.message || "注入失败", { type: "error" });
-  } finally {
-    qqSaving.value = false;
-  }
-}
 
 const selectedColumns: TableColumnList = [
   { label: "歌曲", prop: "name", minWidth: 180 },
@@ -169,51 +133,11 @@ async function onClear() {
 
 onMounted(() => {
   loadSelected();
-  loadQqStatus();
 });
 </script>
 
 <template>
   <div>
-    <!-- QQ 音乐登录态配置：vkey 取流必须 -->
-    <el-card shadow="never" class="mb-4">
-      <template #header>
-        <div class="flex items-center justify-between">
-          <span class="font-medium">QQ 音乐登录态（vkey 取流必须）</span>
-          <el-tag :type="qqStatus?.hasVkeyCredential ? 'success' : 'danger'" size="small">
-            {{ qqStatus?.hasVkeyCredential ? "已配置" : "未配置" }}
-          </el-tag>
-        </div>
-      </template>
-      <el-alert
-        type="info"
-        :closable="false"
-        show-icon
-        class="mb-3"
-        title="QQ 音乐的播放链接（vkey）有时效且必须携带登录态，所以不能像网易云那样直接存外链。请登录网页版 y.qq.com，F12 打开开发者工具，从任意请求的 Request Headers 里复制整条 Cookie 粘贴到下面。"
-      />
-      <div class="flex gap-2">
-        <el-input
-          v-model="qqCookie"
-          type="textarea"
-          :rows="3"
-          placeholder="uin=123456789; qqmusic_key=xxxxxxxx; ..."
-        />
-        <el-button
-          type="primary"
-          :loading="qqSaving"
-          class="shrink-0"
-          @click="onSaveQqCookie"
-        >
-          注入
-        </el-button>
-      </div>
-      <p v-if="qqStatus?.hint" class="text-xs text-amber-500 mt-2">{{ qqStatus.hint }}</p>
-      <p v-else class="text-xs text-emerald-500 mt-2">
-        当前登录账号：{{ qqStatus?.uin || "未知" }}，可以正常取流
-      </p>
-    </el-card>
-
     <el-card shadow="never" class="mb-4">
       <template #header>
         <div class="flex items-center justify-between">
@@ -228,7 +152,7 @@ onMounted(() => {
         :closable="false"
         show-icon
         class="mb-3"
-        title="这里的歌曲会排在歌单前面优先播放。QQ 音乐的播放链接是动态获取的（vkey 有时效），所以前台每次播放都会实时取链。改完后刷新前台页面即可生效，无需重启服务。"
+        title="这里的歌曲会排在歌单前面优先播放。播放链接都带时效，所以前台每次播放都会实时取链。改完后刷新前台页面即可生效，无需重启服务。"
       />
       <pure-table
         :data="selected"
