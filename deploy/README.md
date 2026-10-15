@@ -122,6 +122,53 @@ sudo /opt/certbot-venv/bin/certbot renew --dry-run     # 演练续期，不影�
 > 腾讯云 DNSPod 的拦截页（`webblock.html`），不可靠。
 > 另外大陆服务器用域名访问必须 ICP 备案，IP + IP 证书反而是更省事的路。
 
+## 更新代码：本机一条命令
+
+改完代码后，在本机仓库根目录执行：
+
+```bash
+bash deploy/scripts/sync-to-server.sh
+```
+
+脚本会：
+
+1. 在本地与服务器各算一份**源码指纹**（所有文件的路径 + 内容 md5），只上传变化的部分
+2. 前端变了才重建 frontend 镜像，后端变了才重建 backend，都没变就直接收工
+3. 应用变更并做健康检查（首页 / API / 后台）
+
+常见用法：
+
+| 场景 | 命令 |
+|:---|:---|
+| 改了前端页面、组件、`siteConfig.ts` | `bash deploy/scripts/sync-to-server.sh`（自动重建前端） |
+| 改了后端 `app/*.py` | 同上，自动重建后端 |
+| 改了 `nginx.conf` / `docker-compose.yml` | 同上，自动重载 Nginx |
+| 只传文件、先不重建 | 加 `--no-build` |
+| 换了素材（图片 / Live2D / BGM） | 加 `--assets` |
+| 只换素材，不动代码 | `--assets-only` |
+| 指纹判断失灵时 | 加 `--force` 强制重建 |
+
+**素材不需要重建镜像**：`public/live2d`、`images`、`audio` 是只读卷挂载的，
+传完文件刷新页面就生效。
+
+### 为什么不用 `git pull`
+
+服务器在国内，访问 GitHub 不稳定（本机上传实测 183MB 只要 43 秒，反而更快）。
+代码仍然照常提交到 GitHub 留档，只是**同步走上传，不靠服务器去 pull**。
+
+### 手动方式（脚本出问题时兜底）
+
+```bash
+# 只改了 .env.prod
+ssh ubuntu@122.51.90.31 "cd /opt/kirameku/deploy && set -a && . ./.env.prod && set +a && docker compose up -d"
+
+# 只改了素材
+bash deploy/scripts/sync-to-server.sh --assets-only
+
+# 一定要记住：siteConfig.ts / next.config.ts / layout.tsx 这类源码
+# 是编译进产物的，改完必须重建 frontend，只传文件不生效
+```
+
 ## 日常运维
 
 全部在 `/opt/kirameku/deploy/` 下执行：
