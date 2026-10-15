@@ -153,17 +153,24 @@ def _artist_id_from_search(artist: str) -> str:
     """
     if not artist:
         return ""
+    # 双向包含匹配：网易云常把别名塞进括号，「买辣椒也用券」会被存成
+    # 「冯沁苑(买辣椒也用券)」，写成 == 就永远命中不了。
+    def _same_artist(candidate: str) -> bool:
+        c = (candidate or "").strip().lower()
+        w = artist.strip().lower()
+        return bool(c) and (c == w or w in c or c in w)
+
     payload = _ncm_json("/cloudsearch", keywords=artist, type=1, limit=10)
     songs = (payload or {}).get("result", {}).get("songs") or []
     for s in songs:
         for a in (s.get("artists") or s.get("ar") or []):
-            if isinstance(a, dict) and str(a.get("name", "")) == artist:
+            if isinstance(a, dict) and _same_artist(str(a.get("name", ""))):
                 return str(a.get("id") or "")
     # 单曲搜不到就按歌手类型再搜一次
     payload = _ncm_json("/cloudsearch", keywords=artist, type=100, limit=5)
     artists = (payload or {}).get("result", {}).get("artists") or []
     for a in artists:
-        if isinstance(a, dict) and str(a.get("name", "")) == artist:
+        if isinstance(a, dict) and _same_artist(str(a.get("name", ""))):
             return str(a.get("id") or "")
     return ""
 
@@ -226,11 +233,26 @@ def _lyric_for_kw_song(name: str, artist: str) -> str:
         ar = s.get("artists") or s.get("ar") or []
         return [str(a.get("name", "")) for a in ar if isinstance(a, dict)]
 
+    # 歌手名做双向包含匹配，不能用相等。
+    # 两边的写法经常不一致 —— 酷我给「买辣椒也用券」，网易云存的是
+    # 「冯沁苑(买辣椒也用券)」；反过来也有。早前写成了
+    # `a in _names_of(s)`（列表 contains，实际要求完全相等），
+    # 于是别名带括号的歌手全部对不上，《起风了》等歌词就拿不到。
+    def _artist_hit(found_names: List[str]) -> bool:
+        for want in artists:
+            for got in found_names:
+                lw, lg = want.strip().lower(), got.strip().lower()
+                if not lw or not lg:
+                    continue
+                if lw == lg or lw in lg or lg in lw:
+                    return True
+        return False
+
     for s in songs:
         if str(s.get("name", "")) != name:
             continue
         # 歌手一个都对不上就跳过，避免串到翻唱版
-        if artists and not any(a in _names_of(s) for a in artists):
+        if artists and not _artist_hit(_names_of(s)):
             continue
         return _lyric_from_netease(str(s.get("id") or ""))
     return ""
