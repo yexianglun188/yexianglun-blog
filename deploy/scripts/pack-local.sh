@@ -31,6 +31,7 @@ tar -C "$REPO" -cf - \
     --exclude='*.pyc' \
     --exclude='venv' \
     --exclude='.git' \
+    --exclude='.env' \
     --exclude='*.tsbuildinfo' \
     --exclude='public/live2d' \
     --exclude='public/images' \

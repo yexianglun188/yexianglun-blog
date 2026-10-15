@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Serif_SC } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import "highlight.js/styles/vs2015.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -23,20 +23,17 @@ import GuestGate from "@/components/layout/GuestGate";
 import EasterEggs from "@/components/layout/EasterEggs";
 import { siteConfig } from "@/siteConfig";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
+// 字体自托管：原先 next/font/google 会在**构建期**向 fonts.googleapis.com 拉字体，
+// 国内服务器访问不到会直接构建失败（报错指向 internal/font/google）。
+// 现在只保留真正被使用的 Geist Mono（两个工具页的 CodeMirror 编辑器引用了
+// --font-geist-mono），字体文件放在 public/fonts 下，构建和访客加载都不再依赖外网。
+//
+// 另外两个变量（--font-geist-sans / --font-noto-serif-sc）原先就没有任何地方引用，
+// 已从 Tailwind 默认字体栈渲染，移除后视觉无变化。
+const geistMono = localFont({
+  src: "../public/fonts/GeistMono.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const notoSerifSC = Noto_Serif_SC({
-  variable: "--font-noto-serif-sc",
-  subsets: ["latin"],
-  weight: ["400", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -57,7 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${geistSans.variable} ${geistMono.variable} ${notoSerifSC.variable} h-full antialiased`}
+      className={`${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">

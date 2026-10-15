@@ -26,8 +26,12 @@ services:
       TZ: Asia/Shanghai
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # 仅在数据卷为空（首次启动）时执行 —— 用来恢复本机导出的备份
-      - ./db-init:/docker-entrypoint-initdb.d:ro
+      # 仅在数据卷为空（首次启动）时执行 —— 用来恢复本机导出的备份。
+      # 注意是 ../db-init：db-init 与 deploy 平级，写成 ./db-init 会挂到
+      # deploy/db-init 这个不存在的目录上，启动时容器侧就是空目录，
+      # 日志会打印 ignoring /docker-entrypoint-initdb.d/*（星号没展开 = 没有文件），
+      # 结果数据库安安静静地是空的，没有任何报错。
+      - ../db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -70,6 +74,9 @@ services:
   frontend:
     build:
       context: ../Kirameku
+      # 必须作为 build arg 传入：rewrites 在构建期生成，运行时的 environment 改不了它
+      args:
+        BACKEND_ORIGIN: http://backend:8000
     image: kirameku-frontend:latest
     container_name: kirameku-frontend
     restart: unless-stopped

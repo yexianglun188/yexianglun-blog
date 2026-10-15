@@ -15,8 +15,13 @@ RUN pnpm install --frozen-lockfile
 
 
 FROM node:22-slim AS builder
+# next.config.ts 的 rewrites 在**构建期**就固化进路由清单，运行时的
+# BACKEND_ORIGIN 对它不生效。要指向 compose 里的 backend 服务，必须在 build 时传进来。
+# 由 docker-compose.yml 的 build.args 提供；不传则回退到本机开发默认值。
+ARG BACKEND_ORIGIN=http://127.0.0.1:8000
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    BACKEND_ORIGIN=$BACKEND_ORIGIN
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable && corepack prepare pnpm@9 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
