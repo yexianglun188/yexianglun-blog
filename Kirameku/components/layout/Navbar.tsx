@@ -56,6 +56,18 @@ export default function Navbar() {
   const [easterEgg, setEasterEgg] = useState(false);
   const clickTimes = useRef<number[]>([]);
 
+  // 生日彩蛋：EasterEggs 判定为生日当天时会把 Logo 换成蛋糕。
+  // 判定逻辑集中在 EasterEggs，导航栏只负责显示。
+  // 这里先读一次 documentElement 上的持久标记（副作用执行顺序不保证
+  // EasterEggs 晚于本组件的 useEffect），再补挂监听。
+  const [birthday, setBirthday] = useState(false);
+  useEffect(() => {
+    if (document.documentElement.dataset.birthday === "1") setBirthday(true);
+    const onBirthday = () => setBirthday(true);
+    window.addEventListener("site:birthday", onBirthday);
+    return () => window.removeEventListener("site:birthday", onBirthday);
+  }, []);
+
   const { user, logout } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -218,6 +230,14 @@ export default function Navbar() {
               className={`flex items-center space-x-0.5 select-none ${easterEgg ? "animate-[spin_0.5s_ease-in-out_3]" : ""}`}
               style={easterEgg ? { animation: "spin 0.5s ease-in-out 6, rainbow 3s linear" } : undefined}
             >
+              {birthday && (
+                <span
+                  className="text-xl mr-0.5 inline-block animate-bounce"
+                  title="生日快乐"
+                >
+                  🎂
+                </span>
+              )}
               <span className={`text-xl font-bold tracking-tight ${easterEgg ? "text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500" : "text-slate-800 dark:text-white"}`} style={{ fontFamily: "'Noto Serif SC', serif" }}>
                 yexianglun
               </span>

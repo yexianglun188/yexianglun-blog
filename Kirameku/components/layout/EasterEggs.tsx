@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { confetti, fallingPetals, burstAt, floatingToast, playLoveEgg, playKiramekuEgg, speakText } from "@/lib/easterEggs";
+import { confetti, fallingPetals, burstAt, floatingToast, playLoveEgg, playKiramekuEgg, playAvatarVoice } from "@/lib/easterEggs";
+import { todayLunar } from "@/lib/lunar";
 import { siteConfig } from "@/siteConfig";
 
 /**
@@ -117,10 +118,16 @@ export default function EasterEggs() {
           duration: 6000,
           style: "max-width:85vw;text-align:center",
         });
-        // 配音：浏览器内置语音合成，和台词同步念出来。
+        // 配音：优先播预先合成好的语音文件（声音克隆产物），
+        // 文件缺失/加载失败时自动退回浏览器内置 TTS。
         // 双击本身是用户手势，不会触发浏览器的自动播放限制。
         if (egg.speak) {
-          speakText(egg.line, { rate: egg.rate, pitch: egg.pitch });
+          playAvatarVoice({
+            src: egg.voiceClip,
+            text: egg.line,
+            rate: egg.rate,
+            pitch: egg.pitch,
+          });
         }
       }, 1600);
       setTimeout(() => { rewindLock = false; }, 2500); // 2.5s 后解锁
@@ -157,19 +164,49 @@ export default function EasterEggs() {
     };
   }, [pathname]);
 
-  // ── 彩蛋 3：生日彩蛋 ──
+  // ── 彩蛋 3：生日彩蛋（支持农历）──
   useEffect(() => {
-    const birthday = siteConfig.birthday;
-    if (!birthday) return;
-    const today = new Date();
-    const bd = new Date(birthday);
-    if (today.getMonth() === bd.getMonth() && today.getDate() === bd.getDate()) {
-      const t = setTimeout(() => {
-        confetti({ count: 350, waves: 4, shapes: [0, 1, 2, 3], colors: ["#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff", "#ff6bd6", "#c084fc"] });
-        floatingToast(`🎂 今天是 ${siteConfig.authorName} 的生日！祝 TA 生日快乐！`, { emoji: "🎂", duration: 6000 });
-      }, 2000);
-      return () => clearTimeout(t);
+    let isBirthday = false;
+    let label = "";
+
+    // 优先用农历 —— 农历八月十八换算到公历每年都不同，所以必须真换算
+    const lunarSpec = siteConfig.birthdayLunar?.trim();
+    if (lunarSpec) {
+      const m = /^(\d{1,2})-(\d{1,2})$/.exec(lunarSpec);
+      if (m) {
+        const wantMonth = Number(m[1]);
+        const wantDay = Number(m[2]);
+        const tl = todayLunar();
+        if (tl && tl.month === wantMonth && tl.day === wantDay) {
+          isBirthday = true;
+          label = `农历${tl.monthName}${tl.dayName}`;
+        }
+      }
+    } else if (siteConfig.birthday) {
+      const bd = new Date(siteConfig.birthday);
+      const today = new Date();
+      if (today.getMonth() === bd.getMonth() && today.getDate() === bd.getDate()) {
+        isBirthday = true;
+      }
     }
+
+    if (!isBirthday) return;
+
+    // 通知导航栏把 Logo 换成蛋糕。
+    // 只派发事件不够：React 副作用按树的顺序执行，Navbar 里注册监听的
+    // useEffect 有可能晚于这一句，事件就丢了。所以在 documentElement 上
+    // 另留一个持久标记，Navbar 挂载时先读一次标记再监听事件。
+    document.documentElement.dataset.birthday = "1";
+    window.dispatchEvent(new CustomEvent("site:birthday", { detail: { on: true } }));
+
+    const t = setTimeout(() => {
+      confetti({ count: 350, waves: 4, shapes: [0, 1, 2, 3], colors: ["#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff", "#ff6bd6", "#c084fc"] });
+      floatingToast(
+        `🎂 今天是 ${siteConfig.authorName} 的生日！祝 TA 生日快乐！${label ? `（${label}）` : ""}`,
+        { emoji: "🎂", duration: 6000 }
+      );
+    }, 2000);
+    return () => clearTimeout(t);
   }, []);
 
   // ── 彩蛋 8（补）：情人节爱心雨 ──

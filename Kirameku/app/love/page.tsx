@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fallingPetals, floatingToast } from "@/lib/easterEggs";
 import FadeIn from "@/components/ui/FadeIn";
+import PageBgm from "@/components/ui/PageBgm";
 import { siteConfig } from "@/siteConfig";
 
 /**
@@ -37,7 +38,16 @@ export default function LovePage() {
   if (!mounted) return null;
 
   return (
-    <FadeIn className="w-full max-w-2xl mx-auto py-12 px-6 relative z-10">
+    <>
+      {/* 背景音乐：解锁后才响，循环播放；离开本页（组件卸载）自动停止 */}
+      {unlocked && letter.bgm && (
+        <PageBgm
+          src={letter.bgm}
+          volume={letter.bgmVolume}
+          label="这封信的背景音乐"
+        />
+      )}
+      <FadeIn className="w-full max-w-2xl mx-auto py-12 px-6 relative z-10">
       <AnimatePresence mode="wait">
         {!unlocked ? (
           <motion.div
@@ -93,5 +103,6 @@ export default function LovePage() {
         )}
       </AnimatePresence>
     </FadeIn>
+    </>
   );
 }

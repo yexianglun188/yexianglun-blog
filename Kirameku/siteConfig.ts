@@ -15,7 +15,7 @@ export const siteConfig = {
   title: "yexianglun小站",
   // 站点公网地址（用于 RSS/OG/sitemap 等绝对链接）
   // 注意：cpolar 免费版重启后域名会变，变了记得同步改这里
-  url: "https://b04a0eb.r21.cpolar.top",
+  url: "https://3c24f7fc.r20.vip.cpolar.cn",
   authorName: "yexianglun",
   bio: "在读学生 ｜ 主攻 Java 后端，也在折腾全栈。项目开源在 GitHub，欢迎 star 和 fork！(◕‿◕)",
   // 个性签名（显示在「关于我」页面头像下方）
@@ -30,6 +30,16 @@ export const siteConfig = {
     speak: true,
     rate: 0.9,
     pitch: 1.05,
+    // 配音音频。放 public/audio/ 下即可生效；
+    // 留空或文件不存在时会自动退回浏览器内置语音合成。
+    // 当前用的是「通用克隆模型 B」—— 基于你提供的优菈语音做零样本克隆，
+    // 基频中位 247Hz（与原型 245Hz 一致），音色亮度 1588Hz（原声 1552Hz）。
+    // 想换版本直接替换 public/audio/avatar-line.mp3 即可，不用改这里。
+    //
+    // ⚠️ public/audio/ 整个目录已在 .gitignore 中（见该文件「版权素材」一节）：
+    //    克隆音与原始参考音都源自他人作品，不进公开仓库。
+    //    clone 仓库后此文件不存在 → 自动降级为浏览器语音合成，功能正常，只是音色不同。
+    voiceClip: "/audio/avatar-line.mp3",
   },
 
   // ── 情书彩蛋文案（/love 页，需先在首页搜索框输入摩斯密码解锁）──
@@ -57,13 +67,26 @@ export const siteConfig = {
     lockedTip: "提示：答案就藏在我关于页的最后一行。",
     button: "回赠一颗星 ✨",
     buttonToast: "这封信，会一直在这里等你 💫",
+    // 背景音乐：进入这封信时循环播放，离开页面自动停止。
+    // 直接替换 public/audio/love-bgm.mp3 即可换曲，不用改代码。
+    //
+    // ⚠️ 《路小雨》为受版权保护的商业音乐，故 public/audio/ 不入库（见 .gitignore）。
+    //    clone 仓库后需自备音频；缺失时静默无 BGM，不影响页面其它功能。
+    bgm: "/audio/love-bgm.mp3",
+    bgmVolume: 0.4,
   },
 
-  // 生日（用于生日彩蛋，格式 "YYYY-MM-DD"，不想要可留空字符串）
+  // 生日（用于生日彩蛋）。两种写法二选一，都留空则关闭：
+  //   birthdayLunar: "8-18"      农历八月十八 —— 推荐，每年自动换算成对应公历日
+  //   birthday:      "2000-10-14" 公历，只比较「月-日」，年份仅占位
+  // birthdayLunar 优先。换算表见 lib/lunar.ts（1900~2098）。
+  birthdayLunar: "8-18",
   birthday: "",
 
-  // 天气彩蛋：访客所在地城市（用于 wttr.in 查询，下雪/下雨时全站飘雪花/雨丝）
-  // 填中文城市名即可（如 "Chongqing"），留空则禁用天气彩蛋
+  // 天气彩蛋：按天气让全站飘雪/飘雨（晴/阴/雾不触发，避免糊住背景）
+  //   ""      = 按访客 IP 自动定位（推荐，每个访客看到自己所在地的天气）
+  //   "off"   = 彻底关闭
+  //   "北京"   = 固定城市
   weatherCity: "",
 
   // 头像设置

@@ -386,3 +386,66 @@ export function speakText(
     speakNow();
   }
 }
+
+/* ── 双击头像的配音 ──────────────────────────────────────────────
+ * 两条路，按优先级自动选：
+ *   1) 预先合成好的语音文件（声音克隆产物）—— 音色可控，且所有浏览器一致
+ *   2) 文件缺失/加载失败 → 退回浏览器内置 TTS
+ * 这样即使以后把 public/audio 里的文件删了，彩蛋也不会哑掉。
+ */
+
+let voiceEl: HTMLAudioElement | null = null;
+
+export function playAvatarVoice(cfg: {
+  src?: string;
+  text?: string;
+  rate?: number;
+  pitch?: number;
+}) {
+  if (typeof window === "undefined") return;
+
+  const fallbackToTts = () => {
+    if (cfg.text) speakText(cfg.text, { rate: cfg.rate, pitch: cfg.pitch });
+  };
+
+  if (!cfg.src) {
+    fallbackToTts();
+    return;
+  }
+
+  try {
+    if (!voiceEl) {
+      voiceEl = new Audio();
+      voiceEl.preload = "auto";
+    }
+    const el = voiceEl;
+
+    // 先停掉上一次再重播 —— 这样「连点」天然不会叠音，
+    // 也就不需要再维护一个「正在播」的状态位。
+    // （早前版本用 voiceBusy 标志去挡重叠，结果音频被中途打断时
+    //   onended 不触发、标志位永久卡住，之后双击就彻底没声了。）
+    el.pause();
+    el.currentTime = 0;
+    el.src = cfg.src;
+
+    let settled = false;
+    el.onerror = () => {
+      if (settled) return;
+      settled = true;
+      el.onerror = null;
+      fallbackToTts(); // 文件挂了，退回 TTS
+    };
+
+    const played = el.play();
+    if (played && typeof played.catch === "function") {
+      played.catch(() => {
+        if (settled) return;
+        settled = true;
+        el.onerror = null;
+        fallbackToTts();
+      });
+    }
+  } catch {
+    fallbackToTts();
+  }
+}
