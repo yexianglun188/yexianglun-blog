@@ -29,13 +29,18 @@ WORKDIR /app
 
 # 上游 .dockerignore 采用「先排除全部再白名单」的策略，这里显式列出所需文件，
 # 免得把本地 node_modules / .git 之类的东西也带进来。
+# 注意：这里列出的每一项都必须在仓库里真实存在，缺一个 COPY 就会直接构建失败，
+# 而且报错只是简单的一句 "/xxx": not found。当前版本没有 static 目录。
 COPY module ./module
 COPY plugins ./plugins
 COPY public ./public
-COPY static ./static
 COPY util ./util
 COPY data ./data
 COPY app.js index.js generateConfig.js main.js server.js package.json pnpm-lock.yaml ./
+# 本项目自定义的两个补丁：server.js 运行时 require 它们。
+# 光在这里 COPY 没用 —— 上游 .dockerignore 的白名单里没有这两个文件，
+# 会在构建上下文阶段就被剔除，必须先把它俩加进 ncm-api/.dockerignore 的白名单
+# （部署脚本负责追加，手动部署勿忘）。
 COPY kuwo-patch.js unblock-patch.js ./
 
 # husky 是 devDependency，--prod 下 prepare 脚本会失败，故跳过生命周期脚本
