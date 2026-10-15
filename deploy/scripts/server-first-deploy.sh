@@ -108,6 +108,18 @@ info "目录结构检查通过"
 if [ -d "$BASE/ncm-api" ]; then
     cp "$DEPLOY/music.Dockerfile" "$BASE/ncm-api/Dockerfile.kirameku"
     info "已复制音乐服务 Dockerfile"
+
+    # 上游 .dockerignore 是「先排除全部、再白名单」的写法，本项目新增/依赖的
+    # 这几个文件不在白名单里 —— 它们在**构建上下文阶段**就会被剔除，
+    # Dockerfile 里 COPY 写得再对也拿不到，只能报一句 xxx: not found。
+    DI="$BASE/ncm-api/.dockerignore"
+    touch "$DI"
+    # 上游文件末尾不一定有换行，直接追加会把两行粘成一行，先补一个
+    [ -n "$(tail -c1 "$DI")" ] && printf '\n' >> "$DI"
+    for f in kuwo-patch.js unblock-patch.js package-lock.json; do
+        grep -q "!/$f" "$DI" || echo "!/$f" >> "$DI"
+    done
+    info "已把三个补丁/锁文件加入 .dockerignore 白名单"
 else
     warn "未找到 ncm-api，跳过音乐服务（站点其它功能不受影响）"
 fi
