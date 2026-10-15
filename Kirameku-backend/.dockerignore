@@ -1,0 +1,21 @@
+# 排除本地开发产物，避免 700MB+ 的 venv 被送进 Docker 构建上下文
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# 密钥不进镜像，由 docker-compose 的 env_file 注入
+.env
+
+# 管理后台源码保留 node_modules 之外的部分；dist 需要随包上传（已被 git 忽略）
+admin/node_modules/
+
+.git/
+.gitignore
+migrations/versions/__pycache__/
+
+# 本地上传的图片，部署时另行迁移，不混入镜像
+uploads/*
+!uploads/.gitkeep

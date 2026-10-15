@@ -1,0 +1,13 @@
+# 容器与脚本相关文件必须保持 LF 换行。
+# Windows 上 core.autocrlf=true 会在 checkout 时把它们变成 CRLF，
+# 一旦在 Linux 服务器上出现 \r，脚本会报
+#   bash: $'\r': command not found
+# 而 Dockerfile 里 COPY 进去的脚本同样会失效。
+*.sh text eol=lf
+Dockerfile text eol=lf
+Dockerfile.* text eol=lf
+*.dockerignore text eol=lf
+docker-compose.yml text eol=lf
+nginx.conf text eol=lf
+*.conf text eol=lf
+*.example text eol=lf

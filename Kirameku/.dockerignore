@@ -1,0 +1,18 @@
+node_modules
+.next
+out
+build
+
+# 素材不作为镜像层，运行时由 docker-compose 只读挂载
+public/live2d
+public/images
+public/audio
+
+.git
+.gitignore
+.env
+.env.local
+*.tsbuildinfo
+npm-debug.log*
+.pnpm-error.log*
+.DS_Store

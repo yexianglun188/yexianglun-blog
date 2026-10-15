@@ -1,0 +1,137 @@
+# Kirameku 博客 —— 生产环境编排
+#
+# 服务器目录必须与本文件的相对位置保持一致：
+#   /opt/kirameku/
+#   ├── deploy/            ← 本文件所在目录
+#   ├── Kirameku/          前端源码
+#   ├── Kirameku-backend/  后端源码（含 admin/dist）
+#   ├── ncm-api/           音乐服务
+#   └── db-init/           首次启动自动导入的数据库备份
+#
+# 常用命令（在 deploy/ 目录下执行）：
+#   docker compose up -d --build        首次或更新后启动
+#   docker compose --profile music up -d --build   连带启动音乐服务
+#   docker compose ps / logs -f backend
+
+services:
+  # ---------------------------------------------------------------- 数据库
+  db:
+    image: postgres:16-alpine
+    container_name: kirameku-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # 仅在数据卷为空（首次启动）时执行 —— 用来恢复本机导出的备份
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - kirameku
+
+  # ---------------------------------------------------------------- 后端
+  backend:
+    build:
+      context: ../Kirameku-backend
+    image: kirameku-backend:latest
+    container_name: kirameku-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./.env.prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # 容器网络内不能用 localhost 访问其它容器
+      NCM_API: http://music-api:3301
+      TZ: Asia/Shanghai
+    volumes:
+      - backend-uploads:/app/uploads
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/api/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - kirameku
+
+  # ---------------------------------------------------------------- 前端
+  frontend:
+    build:
+      context: ../Kirameku
+    image: kirameku-frontend:latest
+    container_name: kirameku-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # 前端服务端组件通过该地址访问后端（见 Kirameku/lib/backend.ts）
+      BACKEND_ORIGIN: http://backend:8000
+      NODE_ENV: production
+      TZ: Asia/Shanghai
+    volumes:
+      # 素材不入镜像：这里只读挂载，更新 rsync 一次即可，无需重建镜像
+      - ../Kirameku/public/live2d:/app/public/live2d:ro
+      - ../Kirameku/public/images:/app/public/images:ro
+      - ../Kirameku/public/audio:/app/public/audio:ro
+    expose:
+      - "3000"
+    networks:
+      - kirameku
+
+  # ---------------------------------------------------------------- 音乐服务
+  # 可选组件：默认不随 `docker compose up` 启动，需要时加 --profile music
+  music-api:
+    profiles: ["music"]
+    build:
+      context: ../ncm-api
+      dockerfile: Dockerfile.kirameku
+    image: kirameku-music:latest
+    container_name: kirameku-music
+    restart: unless-stopped
+    environment:
+      PORT: "3301"
+      ENABLE_GENERAL_UNBLOCK: "true"
+      ENABLE_FLAC: "false"
+      TZ: Asia/Shanghai
+    expose:
+      - "3301"
+    networks:
+      - kirameku
+
+  # ---------------------------------------------------------------- 反向代理
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: kirameku-nginx
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # 大体积静态资源由 nginx 直接返回，不再绕一圈 Node
+      - ../Kirameku/public/live2d:/srv/assets/live2d:ro
+      - ../Kirameku/public/images:/srv/assets/images:ro
+      - ../Kirameku/public/audio:/srv/assets/audio:ro
+    networks:
+      - kirameku
+
+volumes:
+  pgdata:
+  backend-uploads:
+
+networks:
+  kirameku:
+    name: kirameku-net

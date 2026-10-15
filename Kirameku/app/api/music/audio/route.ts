@@ -12,7 +12,7 @@
  * 否则 <audio> 无法 seek。
  */
 
-const BACKEND = "http://127.0.0.1:8000";
+import { BACKEND_ORIGIN as BACKEND } from "@/lib/backend";
 
 // 与后端 app/api/music.py 的 _ALLOWED_AUDIO_HOSTS 保持一致
 const ALLOWED_HOSTS = [

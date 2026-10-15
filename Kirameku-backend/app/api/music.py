@@ -9,6 +9,7 @@
 跨平台（酷我/咪咕等）找同名单曲的替代源，实测周杰伦原唱可正常播放。
 """
 
+import os
 import re
 import time
 from typing import Any, Dict, List, Optional
@@ -27,7 +28,8 @@ router = APIRouter(prefix="/api/music", tags=["音乐"])
 
 # 本地部署的 NeteaseCloudMusicApi Enhanced，默认端口 3301。
 # 必须以 ENABLE_GENERAL_UNBLOCK=true 启动，否则 VIP 歌曲拿不到地址。
-NCM_API = "http://localhost:3301"
+# Docker 部署时用 NCM_API=http://music-api:3301 指向 compose service。
+NCM_API = os.getenv("NCM_API", "http://localhost:3301")
 
 HEADERS = {
     "User-Agent": (

@@ -22,6 +22,8 @@ Kirameku-backend/admin/dist_old_*/
 !.env.development
 !.env.production
 !.env.staging
+# 部署配置文件（真实密钥在 .env.prod，不入库）
+!deploy/.env.prod.example
 
 # Python
 __pycache__/

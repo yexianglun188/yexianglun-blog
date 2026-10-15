@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+// Docker 部署时容器内无法用 127.0.0.1 访问后端，改为通过环境变量指定 service 名。
+// 详见 lib/backend.ts。
+const BACKEND = process.env.BACKEND_ORIGIN || "http://127.0.0.1:8000";
+
 const nextConfig: NextConfig = {
   compress: true,
 
@@ -20,21 +24,21 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://127.0.0.1:8000/api/:path*",
+        destination: `${BACKEND}/api/:path*`,
       },
       {
         source: "/uploads/:path*",
-        destination: "http://127.0.0.1:8000/uploads/:path*",
+        destination: `${BACKEND}/uploads/:path*`,
       },
       {
         // 管理后台：Vue dist 挂载在后端 8000，通过前端 3000 转发，公网无需单独穿透 8000
         // 两条规则：/admin（无斜杠，Next 默认 trailingSlash=false 不会自动补）与 /admin/xxx
         source: "/admin",
-        destination: "http://127.0.0.1:8000/admin/",
+        destination: `${BACKEND}/admin/`,
       },
       {
         source: "/admin/:path*",
-        destination: "http://127.0.0.1:8000/admin/:path*",
+        destination: `${BACKEND}/admin/:path*`,
       },
       // 小说数据改为自研后端 /api/novel（novel_crawler.py 抓取 quanben.io），
       // 不再需要 reader3(8085) 代理

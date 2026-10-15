@@ -1,6 +1,6 @@
 import HomeClient from "./HomeClient";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { BACKEND_ORIGIN as API } from "@/lib/backend";
 
 async function fetchProfileData() {
   try {

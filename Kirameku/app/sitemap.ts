@@ -1,9 +1,8 @@
 import type { MetadataRoute } from "next";
 import { siteConfig } from "@/siteConfig";
+import { BACKEND_ORIGIN as BACKEND_URL } from "@/lib/backend";
 
 export const revalidate = 3600;
-
-const BACKEND_URL = "http://127.0.0.1:8000";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteConfig.url.replace(/\/$/, "");

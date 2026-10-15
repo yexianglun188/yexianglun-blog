@@ -16,10 +16,13 @@
 
 from typing import Any, Dict, List
 
+import os
+
 import httpx
 
 NETEASE_SEARCH_URL = "https://music.163.com/api/search/get/web"
-NCM_API = "http://localhost:3301"
+# Docker 部署时用 NCM_API=http://music-api:3301 指向 compose service
+NCM_API = os.getenv("NCM_API", "http://localhost:3301")
 
 HEADERS = {
     "User-Agent": (
